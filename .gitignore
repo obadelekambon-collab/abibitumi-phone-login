@@ -1,0 +1,18 @@
+# Secrets
+.env
+.env.local
+config.local.php
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Node (build tools)
+node_modules/
+dist/
