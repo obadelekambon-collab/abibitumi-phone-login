@@ -27,7 +27,7 @@ settings.
 | **Data retention** | Optional daily deletion of expired closed chats, orphan visitors, and local attachments |
 | **Abuse protection** | Configurable visitor and per-IP limits for sessions, messages, and chatbot requests |
 | **Notifications** | Agent email on new chat / offline lead / hand-off, visitor transcript email on close, browser notifications, Web Push |
-| **PWA** | Web app manifest + service worker, installable agent app, offline shell, push notifications |
+| **PWA** | Web app manifest + service worker, installable agent app, privacy-safe offline state, push notifications |
 | **Departments** | Multiple queues with routing |
 | **Office hours** | Weekly schedule, online/away status, away auto-reply |
 

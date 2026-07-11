@@ -10,7 +10,7 @@
  */
 /* global self, clients */
 
-var ABCHAT_CACHE = 'abchat-shell-v1';
+var ABCHAT_CACHE_PREFIX = 'abchat-shell-';
 
 self.addEventListener( 'install', function ( event ) {
 	self.skipWaiting();
@@ -20,7 +20,7 @@ self.addEventListener( 'activate', function ( event ) {
 	event.waitUntil(
 		caches.keys().then( function ( keys ) {
 			return Promise.all(
-				keys.filter( function ( k ) { return k !== ABCHAT_CACHE; } )
+				keys.filter( function ( k ) { return k.indexOf( ABCHAT_CACHE_PREFIX ) === 0; } )
 					.map( function ( k ) { return caches.delete( k ); } )
 			);
 		} ).then( function () { return self.clients.claim(); } )
@@ -28,22 +28,19 @@ self.addEventListener( 'activate', function ( event ) {
 } );
 
 /**
- * Network-first for navigations so the app is always fresh, falling back
- * to any cached shell when offline. Non-navigation requests pass through.
+ * Never cache navigations: operator dashboard HTML contains private data.
+ * A static, non-sensitive response provides a useful offline state.
  */
 self.addEventListener( 'fetch', function ( event ) {
 	var req = event.request;
 	if ( req.method !== 'GET' ) { return; }
 	if ( req.mode === 'navigate' ) {
 		event.respondWith(
-			fetch( req ).then( function ( res ) {
-				var copy = res.clone();
-				caches.open( ABCHAT_CACHE ).then( function ( c ) { c.put( req, copy ); } );
-				return res;
-			} ).catch( function () {
-				return caches.match( req ).then( function ( hit ) {
-					return hit || caches.match( '/' );
-				} );
+			fetch( req ).catch( function () {
+				return new Response(
+					'<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chat offline</title></head><body><main><h1>Chat is offline</h1><p>Reconnect to view conversations and send messages.</p></main></body></html>',
+					{ status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } }
+				);
 			} )
 		);
 	}

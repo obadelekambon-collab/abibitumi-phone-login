@@ -114,6 +114,12 @@ ok( $defaults['conversation_rate_limit'] === 10 && $defaults['conversation_rate_
 ok( $defaults['stream_enabled'] === 0 && $defaults['stream_duration'] === 25, 'SSE transport is optional with a bounded default duration' );
 ok( $defaults['retention_enabled'] === 0 && $defaults['retention_days'] === 365, 'retention is opt-in with a one-year default policy' );
 
+echo "== PWA cache privacy ==\n";
+$service_worker = file_get_contents( ABCHAT_DIR . 'assets/js/sw.js' );
+ok( false === strpos( $service_worker, '.put(' ), 'service worker never caches authenticated navigation responses' );
+ok( false !== strpos( $service_worker, "k.indexOf( ABCHAT_CACHE_PREFIX ) === 0" ), 'service worker deletes only its own legacy caches' );
+ok( false !== strpos( $service_worker, "'Cache-Control': 'no-store'" ), 'offline response explicitly forbids storage' );
+
 echo "== Office hours ==\n";
 // Disabled => always open.
 ABChat_Settings::update( array( 'office_hours_enabled' => 0 ) );
