@@ -591,21 +591,25 @@ class ABChat_DB {
 	}
 
 	/**
-	 * Best-effort client IP.
+	 * Resolve the client IP without trusting spoofable proxy headers by default.
+	 *
+	 * Sites behind a trusted reverse proxy may replace the socket peer address
+	 * with a validated forwarding header through the abchat_client_ip filter.
 	 *
 	 * @return string
 	 */
 	public static function client_ip() {
-		$keys = array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR' );
-		foreach ( $keys as $k ) {
-			if ( ! empty( $_SERVER[ $k ] ) ) {
-				$ip = sanitize_text_field( wp_unslash( $_SERVER[ $k ] ) );
-				$ip = trim( explode( ',', $ip )[0] );
-				if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-					return $ip;
-				}
-			}
-		}
-		return '';
+		$remote = ! empty( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		$remote = filter_var( $remote, FILTER_VALIDATE_IP ) ? $remote : '';
+		/**
+		 * Filter the resolved chat client IP for trusted reverse-proxy setups.
+		 *
+		 * Implementations must validate that REMOTE_ADDR belongs to a trusted
+		 * proxy before returning a forwarded address.
+		 *
+		 * @param string $remote Socket peer address, or an empty string.
+		 */
+		$ip = apply_filters( 'abchat_client_ip', $remote );
+		return filter_var( $ip, FILTER_VALIDATE_IP ) ? (string) $ip : $remote;
 	}
 }

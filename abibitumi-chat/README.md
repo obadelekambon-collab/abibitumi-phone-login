@@ -142,6 +142,11 @@ Chatbot**; the IP ceiling is three times the visitor ceiling so ordinary shared
 networks have headroom while repeated new-session abuse is still contained.
 Exceeded requests receive HTTP `429` with retry timing.
 
+Abuse-control IP buckets use the direct socket peer address and do not trust
+client-supplied forwarding headers. Sites behind a known reverse proxy can
+provide a validated address through the `abchat_client_ip` filter after first
+confirming that `REMOTE_ADDR` belongs to that trusted proxy.
+
 ## Extending
 - `abchat_bot_response` (filter) — return a string or
   `{ reply, quickReplies, handoff }` to swap the rule engine for an LLM.

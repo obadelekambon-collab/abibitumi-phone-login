@@ -96,4 +96,15 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 'abchat_session_rate_limited', $limited->get_error_code() );
 		$this->assertSame( 429, $limited->get_error_data()['status'] );
 	}
+
+	/**
+	 * Untrusted forwarding headers cannot rotate the abuse-control IP bucket.
+	 */
+	public function test_client_ip_ignores_untrusted_forwarding_headers() {
+		$_SERVER['REMOTE_ADDR']          = '192.0.2.40';
+		$_SERVER['HTTP_X_FORWARDED_FOR'] = '198.51.100.1';
+		$_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.1';
+		$this->assertSame( '192.0.2.40', ABChat_DB::client_ip() );
+		unset( $_SERVER['HTTP_X_FORWARDED_FOR'], $_SERVER['HTTP_CF_CONNECTING_IP'] );
+	}
 }
