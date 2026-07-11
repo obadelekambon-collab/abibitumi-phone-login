@@ -56,6 +56,8 @@ class ABChat_Settings {
 			'max_upload_mb'      => 5,
 			'poll_interval'      => 4, // seconds (visitor widget).
 			'agent_poll_interval'=> 3, // seconds (dashboard).
+			'stream_enabled'     => 0, // Optional SSE; polling remains the fallback.
+			'stream_duration'    => 25, // seconds per SSE connection.
 			'transcript_email'   => 1, // email transcript to visitor on close.
 
 			// Office hours (24h, site timezone). Empty = always open.
@@ -213,6 +215,7 @@ class ABChat_Settings {
 			'fileUploads'     => (bool) $s['file_uploads'],
 			'maxUploadMb'     => (int) $s['max_upload_mb'],
 			'pollInterval'    => max( 2, (int) $s['poll_interval'] ),
+			'streamEnabled'   => (bool) $s['stream_enabled'],
 			'botEnabled'      => (bool) $s['bot_enabled'],
 			'botName'         => $s['bot_name'],
 			'botGreeting'     => $s['bot_greeting'],

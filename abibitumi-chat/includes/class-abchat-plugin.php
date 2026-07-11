@@ -54,6 +54,13 @@ class ABChat_Plugin {
 	public $gemini;
 
 	/**
+	 * Server-Sent Events transport.
+	 *
+	 * @var ABChat_Stream
+	 */
+	public $stream;
+
+	/**
 	 * Boot.
 	 */
 	public function __construct() {
@@ -65,12 +72,14 @@ class ABChat_Plugin {
 		$this->notifications = new ABChat_Notifications();
 		$this->pwa           = new ABChat_PWA();
 		$this->gemini        = new ABChat_Gemini();
+		$this->stream        = new ABChat_Stream();
 
 		$this->rest->init();
 		$this->widget->init();
 		$this->notifications->init();
 		$this->pwa->init();
 		$this->gemini->init();
+		$this->stream->init();
 
 		if ( is_admin() ) {
 			$this->admin->init();

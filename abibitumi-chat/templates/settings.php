@@ -159,6 +159,14 @@ $checkbox = function ( $name, $val, $label ) {
 						<label><?php esc_html_e( 'Agent', 'abibitumi-chat' ); ?> <input name="agent_poll_interval" type="number" min="2" value="<?php echo esc_attr( $s['agent_poll_interval'] ); ?>"></label>
 					</td>
 				</tr>
+				<tr>
+					<th><?php esc_html_e( 'Live update transport', 'abibitumi-chat' ); ?></th>
+					<td>
+						<?php $checkbox( 'stream_enabled', $s['stream_enabled'], __( 'Use Server-Sent Events when supported', 'abibitumi-chat' ) ); ?><br>
+						<label><?php esc_html_e( 'Connection duration', 'abibitumi-chat' ); ?> <input name="stream_duration" type="number" min="10" max="60" value="<?php echo esc_attr( $s['stream_duration'] ); ?>"> <?php esc_html_e( 'seconds', 'abibitumi-chat' ); ?></label>
+						<p class="description"><?php esc_html_e( 'Polling starts automatically if streaming is unavailable or interrupted.', 'abibitumi-chat' ); ?></p>
+					</td>
+				</tr>
 			</table>
 		</div>
 

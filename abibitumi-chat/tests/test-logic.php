@@ -29,6 +29,7 @@ function sanitize_file_name( $s ) { return preg_replace( '/[^a-zA-Z0-9._-]/', ''
 function wp_kses_post( $s ) { return $s; }
 function wp_parse_url( $url, $c = -1 ) { return parse_url( $url, $c ); }
 function home_url( $p = '' ) { return 'https://abibitumi.com' . $p; }
+function current_user_can( $capability ) { return false; }
 function sanitize_key( $s ) { return preg_replace( '/[^a-z0-9_-]/', '', strtolower( $s ) ); }
 function get_transient( $key ) { global $__transients; return isset( $__transients[ $key ] ) ? $__transients[ $key ] : false; }
 function set_transient( $key, $value, $expiration ) { global $__transients; $__transients[ $key ] = $value; return true; }
@@ -44,6 +45,18 @@ class WP_Error {
 	public function get_error_code() { return $this->code; }
 	public function get_error_data() { return $this->data; }
 }
+class WP_REST_Response {
+	private $status;
+	public function __construct( $data = null, $status = 200 ) { $this->status = $status; }
+	public function get_status() { return $this->status; }
+}
+class ABChat_Test_REST_Request {
+	private $route;
+	private $params;
+	public function __construct( $route, $params = array() ) { $this->route = $route; $this->params = $params; }
+	public function get_route() { return $this->route; }
+	public function get_param( $key ) { return isset( $this->params[ $key ] ) ? $this->params[ $key ] : null; }
+}
 
 // Stub ABChat_DB so the chatbot's respond() can run without a database.
 class ABChat_DB {
@@ -56,6 +69,7 @@ require __DIR__ . '/../includes/class-abchat-settings.php';
 require __DIR__ . '/../includes/class-abchat-chatbot.php';
 require __DIR__ . '/../includes/class-abchat-gemini.php';
 require __DIR__ . '/../includes/class-abchat-rest.php';
+require __DIR__ . '/../includes/class-abchat-stream.php';
 
 $pass = 0; $fail = 0;
 function ok( $cond, $label ) {
@@ -72,6 +86,7 @@ ok( $defaults['primary_color'] === '#0b7d3e', 'brand green default' );
 ok( $defaults['bot_ai_enabled'] === 0, 'Gemini disabled by default' );
 ok( $defaults['gemini_model'] === 'gemini-2.5-flash', 'Gemini model has a portable default' );
 ok( $defaults['bot_rate_limit'] === 10 && $defaults['bot_rate_window'] === 60, 'bot rate limit has portable defaults' );
+ok( $defaults['stream_enabled'] === 0 && $defaults['stream_duration'] === 25, 'SSE transport is optional with a bounded default duration' );
 
 echo "== Office hours ==\n";
 // Disabled => always open.
@@ -166,6 +181,14 @@ for ( $i = 1; $i <= 10; $i++ ) {
 	}
 }
 ok( 10 === $i && is_wp_error( $limited ), 'IP bucket blocks new-session visitor rotation' );
+
+echo "== SSE authorization guards ==\n";
+ABChat_Settings::update( array( 'stream_enabled' => 1 ) );
+$stream_transport = new ABChat_Stream();
+$request          = new ABChat_Test_REST_Request( ABChat_Stream::VISITOR_ROUTE );
+ok( false === $stream_transport->serve( false, new WP_REST_Response( null, 401 ), $request, null ), 'failed visitor authentication is not intercepted as a stream' );
+$request = new ABChat_Test_REST_Request( ABChat_Stream::AGENT_ROUTE );
+ok( false === $stream_transport->serve( false, new WP_REST_Response( null, 200 ), $request, null ), 'agent stream rechecks operator capability' );
 
 echo "== VAPID key generation ==\n";
 require __DIR__ . '/../includes/class-abchat-notifications.php';

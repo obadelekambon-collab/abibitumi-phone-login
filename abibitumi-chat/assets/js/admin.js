@@ -20,6 +20,7 @@
 	var canned  = [];
 	var listTimer = null;
 	var msgTimer  = null;
+	var stream    = null;
 	var typingTimer = null;
 	var audioCtx = null;
 
@@ -123,7 +124,7 @@
 		$( '#abchat-conversation' ).classList.add( 'has-active' );
 		api( '/agent/conversation/' + id ).then( function ( res ) {
 			renderConversation( res );
-			startMsgPoll();
+			startUpdates();
 		} );
 	}
 
@@ -326,6 +327,39 @@
 	/* ------------------------------------------------------------------ */
 	/* Polling                                                            */
 	/* ------------------------------------------------------------------ */
+	function startUpdates() {
+		if ( stream ) { stream.close(); stream = null; }
+		if ( A.streamEnabled && window.EventSource ) {
+			startStream();
+		} else {
+			startMsgPoll();
+		}
+	}
+	function startStream() {
+		if ( msgTimer ) { clearInterval( msgTimer ); msgTimer = null; }
+		var url = A.restUrl + '/agent/stream?_wpnonce=' + encodeURIComponent( A.nonce ) +
+			'&conversation_id=' + encodeURIComponent( current || 0 ) + '&after=' + encodeURIComponent( lastId );
+		stream = new EventSource( url, { withCredentials: true } );
+		stream.addEventListener( 'update', function ( event ) {
+			var res;
+			try { res = JSON.parse( event.data ); } catch ( e ) { return; }
+			( res.messages || [] ).forEach( function ( m ) {
+				if ( m.id && m.id <= lastId ) { return; }
+				appendMessage( m );
+				if ( 'visitor' === m.senderType ) { onIncoming( m ); }
+			} );
+			showTyping( res.visitorTyping );
+			renderCounts( res.counts || {} );
+		} );
+		stream.addEventListener( 'reconnect', function () {
+			if ( stream ) { stream.close(); stream = null; }
+			startStream();
+		} );
+		stream.onerror = function () {
+			if ( stream ) { stream.close(); stream = null; }
+			startMsgPoll();
+		};
+	}
 	function startMsgPoll() {
 		if ( msgTimer ) { clearInterval( msgTimer ); }
 		msgTimer = setInterval( loadMessages, A.pollInterval * 1000 );

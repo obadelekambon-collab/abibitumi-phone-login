@@ -20,6 +20,7 @@
 	var convo    = null;      // conversation id
 	var lastId   = 0;         // last message id seen
 	var pollTimer = null;
+	var stream   = null;
 	var typingTimer = null;
 	var isOpen   = false;
 	var seenIntro = false;
@@ -175,11 +176,11 @@
 			badge.style.display = 'none';
 			badge.textContent = '';
 			ensureConversation();
-			startPolling();
+			startUpdates();
 			setTimeout( function () { input && input.focus(); }, 150 );
 			markRead();
 		} else {
-			stopPolling();
+			stopUpdates();
 		}
 	}
 
@@ -385,9 +386,37 @@
 	/* ------------------------------------------------------------------ */
 	/* Polling                                                            */
 	/* ------------------------------------------------------------------ */
+	function startUpdates() {
+		stopUpdates();
+		poll();
+		if ( CFG.streamEnabled && window.EventSource && token && convo ) {
+			startStream();
+		} else {
+			startPolling();
+		}
+	}
+	function stopUpdates() {
+		stopPolling();
+		if ( stream ) { stream.close(); stream = null; }
+	}
+	function startStream() {
+		var url = D.restUrl + '/stream?token=' + encodeURIComponent( token ) +
+			'&conversation_id=' + encodeURIComponent( convo ) + '&after=' + encodeURIComponent( lastId );
+		stream = new EventSource( url, { withCredentials: true } );
+		stream.addEventListener( 'update', function ( event ) {
+			try { handleUpdate( JSON.parse( event.data ) ); } catch ( e ) {}
+		} );
+		stream.addEventListener( 'reconnect', function () {
+			if ( stream ) { stream.close(); stream = null; }
+			if ( isOpen ) { startStream(); }
+		} );
+		stream.onerror = function () {
+			if ( stream ) { stream.close(); stream = null; }
+			if ( isOpen ) { startPolling(); }
+		};
+	}
 	function startPolling() {
 		stopPolling();
-		poll();
 		pollTimer = setInterval( poll, ( CFG.pollInterval || 4 ) * 1000 );
 	}
 	function stopPolling() {
@@ -396,20 +425,24 @@
 	function poll() {
 		if ( ! convo ) { return; }
 		api( '/poll?conversation_id=' + convo + '&after=' + lastId ).then( function ( res ) {
-			if ( res.messages && res.messages.length ) {
-				res.messages.forEach( function ( m ) {
-					appendMessage( m );
-					if ( 'operator' === m.senderType ) { humanJoined = true; }
-					if ( 'visitor' !== m.senderType && 'system' !== m.senderType ) {
-						notifyIncoming( m );
-					}
-				} );
-			}
-			showTyping( res.agentTyping );
-			if ( res.operatorName ) { headerStatus.textContent = res.operatorName; }
-			if ( 'closed' === res.status ) { offerRating(); }
-			if ( isOpen ) { markRead(); }
+			handleUpdate( res );
 		} ).catch( function () {} );
+	}
+	function handleUpdate( res ) {
+		if ( res.messages && res.messages.length ) {
+			res.messages.forEach( function ( m ) {
+				if ( m.id && m.id <= lastId ) { return; }
+				appendMessage( m );
+				if ( 'operator' === m.senderType ) { humanJoined = true; }
+				if ( 'visitor' !== m.senderType && 'system' !== m.senderType ) {
+					notifyIncoming( m );
+				}
+			} );
+		}
+		showTyping( res.agentTyping );
+		if ( res.operatorName ) { headerStatus.textContent = res.operatorName; }
+		if ( 'closed' === res.status ) { offerRating(); }
+		if ( isOpen ) { markRead(); }
 	}
 
 	function notifyIncoming( m ) {

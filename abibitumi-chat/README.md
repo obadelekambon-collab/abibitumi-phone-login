@@ -79,6 +79,16 @@ the dashboard is closed.
 - `abchat_manage` — edit settings (auto-granted to admin).
 - **Chat Operator** role — a light role for support staff.
 
+## Live update transport
+
+REST polling works on every supported host and remains the default. Sites whose
+PHP/web-server stack supports long-lived responses can enable **Server-Sent
+Events** under **Chat → Settings → Live update transport**. Visitor streams use
+the existing visitor token; operator streams require the signed-in operator
+cookie and REST nonce. Connections are deliberately short and reconnect before
+common proxy timeouts. If a stream is rejected, buffered, or interrupted, the
+visitor widget and operator dashboard automatically resume REST polling.
+
 ## Chatbot AI backend (optional, free tiers work)
 
 The bot is rule-based out of the box (no API key, no cost). An optional Google
