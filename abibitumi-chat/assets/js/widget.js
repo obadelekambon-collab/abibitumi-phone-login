@@ -360,6 +360,9 @@
 		if ( m.meta && m.meta.quickReplies && m.meta.quickReplies.length ) {
 			renderQuickReplies( m.meta.quickReplies );
 		}
+		if ( m.meta && m.meta.suggestions && m.meta.suggestions.length ) {
+			renderSuggestions( m.meta.suggestions );
+		}
 		scrollBottom();
 	}
 
@@ -394,6 +397,23 @@
 		} else {
 			startPolling();
 		}
+	}
+
+	function renderSuggestions( suggestions ) {
+		var wrap = el( 'div', 'abchat-quick abchat-suggestions' );
+		suggestions.forEach( function ( suggestion ) {
+			var a = document.createElement( 'a' );
+			try {
+				a.href = suggestion.url;
+				if ( 'http:' !== a.protocol && 'https:' !== a.protocol ) { return; }
+			} catch ( e ) { return; }
+			a.className = 'abchat-quick-btn';
+			a.textContent = suggestion.title;
+			a.target = '_blank';
+			a.rel = 'noopener';
+			wrap.appendChild( a );
+		} );
+		if ( wrap.children.length ) { body.appendChild( wrap ); }
 	}
 	function stopUpdates() {
 		stopPolling();

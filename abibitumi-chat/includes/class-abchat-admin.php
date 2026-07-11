@@ -305,6 +305,24 @@ class ABChat_Admin {
 			$values['bot_flows'] = $flows;
 		}
 
+		// Knowledge-base articles (parallel arrays).
+		$articles = array();
+		if ( isset( $in['kb_title'] ) && is_array( $in['kb_title'] ) ) {
+			foreach ( $in['kb_title'] as $i => $title ) {
+				$title = sanitize_text_field( $title );
+				$url   = isset( $in['kb_url'][ $i ] ) ? esc_url_raw( $in['kb_url'][ $i ] ) : '';
+				if ( '' === $title || '' === $url ) {
+					continue;
+				}
+				$articles[] = array(
+					'title'    => $title,
+					'url'      => $url,
+					'keywords' => array_filter( array_map( 'trim', explode( ',', isset( $in['kb_keywords'][ $i ] ) ? sanitize_text_field( $in['kb_keywords'][ $i ] ) : '' ) ) ),
+				);
+			}
+		}
+		$values['knowledge_base'] = $articles;
+
 		ABChat_Settings::update( $values );
 
 		wp_safe_redirect( add_query_arg( array( 'page' => 'abchat-settings', 'updated' => '1' ), admin_url( 'admin.php' ) ) );

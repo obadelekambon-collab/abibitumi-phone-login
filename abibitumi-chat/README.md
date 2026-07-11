@@ -17,7 +17,7 @@ settings.
 | **Live chat widget** | Launcher bubble, chat window, proactive greeting, unread badge, sound, mobile-responsive |
 | **Real-time messaging** | REST polling (works on any shared host — no socket server needed), typing indicators, read receipts |
 | **Pre-chat form** | Ask name / email / phone, department routing |
-| **Chatbot** | Keyword flows, quick-reply buttons, auto-greeting, lead capture, human hand-off, office-hours away messages |
+| **Chatbot** | Keyword flows, quick replies, knowledge-base article suggestions, auto-greeting, lead capture, human hand-off, office-hours away messages |
 | **Operator dashboard** | Three-pane inbox, open/pending/closed filters, search, assignment & transfer, internal notes, canned responses (`/shortcut`), visitor info panel, conversation CSV export |
 | **File sharing** | Images + documents both directions, size/type limits |
 | **Visitor tracking** | Online visitor list, current page, referrer, IP, device, registered-member detection |

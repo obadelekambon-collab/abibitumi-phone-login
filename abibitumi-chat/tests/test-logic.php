@@ -163,6 +163,11 @@ ok( strpos( $r['reply'], 'membership' ) !== false, 'matches pricing flow on "mem
 ok( $r['handoff'] === false, 'pricing match does not hand off' );
 ok( count( $r['quickReplies'] ) === 3, 'offers quick replies after a match' );
 
+ABChat_Settings::update( array( 'knowledge_base' => array( array( 'title' => 'Membership guide', 'url' => 'https://example.org/membership', 'keywords' => array( 'membership', 'join' ) ) ) ) );
+$r = $bot->respond( 1, 'How do I join the membership?' );
+ok( 'Membership guide' === $r['suggestions'][0]['title'], 'suggests a matching knowledge-base article' );
+ok( 'https://example.org/membership' === $r['suggestions'][0]['url'], 'knowledge-base suggestion preserves its validated URL' );
+
 $r = $bot->respond( 1, 'I want to learn Twi language classes' );
 ok( strpos( strtolower( $r['reply'] ), 'live and self-paced' ) !== false, 'matches courses flow on "twi/language/class"' );
 

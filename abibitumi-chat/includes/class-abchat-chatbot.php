@@ -40,6 +40,7 @@ class ABChat_Chatbot {
 
 		$handoff = false;
 		$quick   = array();
+		$suggestions = $this->article_suggestions( $text );
 
 		if ( $matched ) {
 			$answer = $matched['answer'];
@@ -72,6 +73,7 @@ class ABChat_Chatbot {
 		if ( is_array( $filtered ) ) {
 			$reply   = isset( $filtered['reply'] ) ? $filtered['reply'] : $reply;
 			$quick   = isset( $filtered['quickReplies'] ) ? $filtered['quickReplies'] : $quick;
+			$suggestions = isset( $filtered['suggestions'] ) ? $filtered['suggestions'] : $suggestions;
 			$handoff = isset( $filtered['handoff'] ) ? (bool) $filtered['handoff'] : $handoff;
 		} elseif ( is_string( $filtered ) ) {
 			$reply = $filtered;
@@ -83,7 +85,7 @@ class ABChat_Chatbot {
 			'sender_name'     => ABChat_Settings::get( 'bot_name' ),
 			'body'            => $reply,
 			'type'            => 'text',
-			'meta'            => array( 'quickReplies' => $quick, 'handoff' => $handoff ),
+			'meta'            => array( 'quickReplies' => $quick, 'suggestions' => $suggestions, 'handoff' => $handoff ),
 		) );
 
 		if ( $handoff ) {
@@ -99,9 +101,41 @@ class ABChat_Chatbot {
 		return array(
 			'reply'        => $reply,
 			'quickReplies' => $quick,
+			'suggestions'  => $suggestions,
 			'handoff'      => $handoff,
 			'messageId'    => $message_id,
 		);
+	}
+
+	/**
+	 * Match configured articles against visitor text.
+	 *
+	 * @param string $text Visitor text.
+	 * @return array
+	 */
+	protected function article_suggestions( $text ) {
+		$haystack = strtolower( wp_strip_all_tags( $text ) );
+		$out      = array();
+		foreach ( (array) ABChat_Settings::get( 'knowledge_base', array() ) as $article ) {
+			if ( ! is_array( $article ) || empty( $article['title'] ) || empty( $article['url'] ) ) {
+				continue;
+			}
+			$url = esc_url_raw( $article['url'] );
+			if ( '' === $url ) {
+				continue;
+			}
+			foreach ( isset( $article['keywords'] ) ? (array) $article['keywords'] : array() as $keyword ) {
+				$keyword = strtolower( trim( $keyword ) );
+				if ( '' !== $keyword && false !== strpos( $haystack, $keyword ) ) {
+					$out[] = array( 'title' => sanitize_text_field( $article['title'] ), 'url' => $url );
+					break;
+				}
+			}
+			if ( 3 <= count( $out ) ) {
+				break;
+			}
+		}
+		return $out;
 	}
 
 	/**

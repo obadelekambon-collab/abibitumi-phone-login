@@ -331,6 +331,19 @@ $checkbox = function ( $name, $val, $label ) {
 					</div>
 				<?php endforeach; ?>
 			</div>
+			<h4><?php esc_html_e( 'Knowledge-base suggestions', 'abibitumi-chat' ); ?></h4>
+			<p class="description"><?php esc_html_e( 'Suggest up to three relevant articles when visitor text contains configured keywords.', 'abibitumi-chat' ); ?></p>
+			<div class="abchat-repeatable" id="abchat-knowledge-base">
+				<?php foreach ( (array) $s['knowledge_base'] as $article ) : ?>
+					<div class="row">
+						<input type="text" name="kb_title[]" value="<?php echo esc_attr( $article['title'] ); ?>" placeholder="<?php esc_attr_e( 'Article title', 'abibitumi-chat' ); ?>">
+						<input type="url" name="kb_url[]" value="<?php echo esc_url( $article['url'] ); ?>" placeholder="https://">
+						<input type="text" name="kb_keywords[]" value="<?php echo esc_attr( implode( ', ', (array) $article['keywords'] ) ); ?>" placeholder="<?php esc_attr_e( 'keywords', 'abibitumi-chat' ); ?>">
+						<button type="button" class="button abchat-remove-row">&times;</button>
+					</div>
+				<?php endforeach; ?>
+			</div>
+			<button type="button" class="button abchat-add-row" data-target="abchat-knowledge-base" data-template="knowledge"><?php esc_html_e( 'Add article', 'abibitumi-chat' ); ?></button>
 			<button type="button" class="button" data-add="abchat-flows" data-template="flow"><?php esc_html_e( '+ Add flow', 'abibitumi-chat' ); ?></button>
 		</div>
 
@@ -423,7 +436,8 @@ $checkbox = function ( $name, $val, $label ) {
 ( function () {
 	var templates = {
 		dept: '<div class="row"><input type="text" name="dept_id[]" placeholder="id"><input type="text" name="dept_name[]" placeholder="Name"><button type="button" class="button abchat-remove-row">&times;</button></div>',
-		flow: '<div class="row"><input type="text" name="flow_id[]" placeholder="id" style="max-width:90px;"><input type="text" name="flow_label[]" placeholder="Button label"><input type="text" name="flow_keywords[]" placeholder="keywords"><textarea name="flow_answer[]" rows="1" placeholder="Answer"></textarea><button type="button" class="button abchat-remove-row">&times;</button></div>'
+		flow: '<div class="row"><input type="text" name="flow_id[]" placeholder="id" style="max-width:90px;"><input type="text" name="flow_label[]" placeholder="Button label"><input type="text" name="flow_keywords[]" placeholder="keywords"><textarea name="flow_answer[]" rows="1" placeholder="Answer"></textarea><button type="button" class="button abchat-remove-row">&times;</button></div>',
+		knowledge: '<div class="row"><input type="text" name="kb_title[]" placeholder="Article title"><input type="url" name="kb_url[]" placeholder="https://"><input type="text" name="kb_keywords[]" placeholder="keywords"><button type="button" class="button abchat-remove-row">&times;</button></div>'
 	};
 	document.querySelectorAll( '[data-add]' ).forEach( function ( btn ) {
 		btn.addEventListener( 'click', function () {
