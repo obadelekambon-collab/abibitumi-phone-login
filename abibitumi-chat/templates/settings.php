@@ -249,6 +249,28 @@ $checkbox = function ( $name, $val, $label ) {
 					<td><textarea name="bot_fallback" id="bot_fallback" class="large-text" rows="2"><?php echo esc_textarea( $s['bot_fallback'] ); ?></textarea></td>
 				</tr>
 			</table>
+			<h4><?php esc_html_e( 'Google Gemini AI', 'abibitumi-chat' ); ?></h4>
+			<p class="description"><?php esc_html_e( 'Optional. When Gemini is unavailable or cannot answer, the configured rule engine is used automatically.', 'abibitumi-chat' ); ?></p>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th><?php esc_html_e( 'Enable Gemini', 'abibitumi-chat' ); ?></th>
+					<td><?php $checkbox( 'bot_ai_enabled', $s['bot_ai_enabled'], __( 'Use Gemini for visitor messages', 'abibitumi-chat' ) ); ?></td>
+				</tr>
+				<tr>
+					<th><label for="gemini_api_key"><?php esc_html_e( 'Gemini API key', 'abibitumi-chat' ); ?></label></th>
+					<td>
+						<input name="gemini_api_key" id="gemini_api_key" type="password" class="regular-text" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( ! empty( $s['gemini_api_key'] ) ? __( 'Saved — leave blank to keep', 'abibitumi-chat' ) : __( 'Enter API key', 'abibitumi-chat' ) ); ?>">
+						<?php if ( ! empty( $s['gemini_api_key'] ) ) : ?>
+							<label><input name="gemini_api_key_clear" type="checkbox" value="1"> <?php esc_html_e( 'Remove saved key', 'abibitumi-chat' ); ?></label>
+						<?php endif; ?>
+						<p class="description"><?php esc_html_e( 'For stronger key isolation, define ABCHAT_GEMINI_API_KEY in wp-config.php or as an environment variable. It takes precedence over this field.', 'abibitumi-chat' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th><label for="gemini_model"><?php esc_html_e( 'Gemini model', 'abibitumi-chat' ); ?></label></th>
+					<td><input name="gemini_model" id="gemini_model" type="text" class="regular-text" value="<?php echo esc_attr( $s['gemini_model'] ); ?>"></td>
+				</tr>
+			</table>
 			<h4><?php esc_html_e( 'Flows (keyword → answer)', 'abibitumi-chat' ); ?></h4>
 			<p class="description"><?php esc_html_e( 'Comma-separated keywords. Use __HANDOFF__ as the answer to route the visitor to a human.', 'abibitumi-chat' ); ?></p>
 			<div class="abchat-repeatable" id="abchat-flows">

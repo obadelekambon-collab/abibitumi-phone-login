@@ -94,6 +94,7 @@ class ABChat_Presets {
 	 */
 	public static function export() {
 		$data = ABChat_Settings::all();
+		unset( $data['gemini_api_key'] );
 		$data = array( '_label' => get_bloginfo( 'name' ), '_site' => wp_parse_url( home_url(), PHP_URL_HOST ) ) + $data;
 		return wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 	}

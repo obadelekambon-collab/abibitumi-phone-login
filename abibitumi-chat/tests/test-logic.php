@@ -28,6 +28,11 @@ function sanitize_file_name( $s ) { return preg_replace( '/[^a-zA-Z0-9._-]/', ''
 function wp_kses_post( $s ) { return $s; }
 function wp_parse_url( $url, $c = -1 ) { return parse_url( $url, $c ); }
 function home_url( $p = '' ) { return 'https://abibitumi.com' . $p; }
+function is_wp_error( $value ) { return $value instanceof WP_Error; }
+function wp_remote_retrieve_response_code( $response ) { return isset( $response['response']['code'] ) ? $response['response']['code'] : 0; }
+function wp_remote_retrieve_body( $response ) { return isset( $response['body'] ) ? $response['body'] : ''; }
+function wp_remote_post( $url, $args ) { global $__remote_response, $__remote_request; $__remote_request = array( 'url' => $url, 'args' => $args ); return $__remote_response; }
+class WP_Error {}
 
 // Stub ABChat_DB so the chatbot's respond() can run without a database.
 class ABChat_DB {
@@ -38,6 +43,7 @@ class ABChat_DB {
 
 require __DIR__ . '/../includes/class-abchat-settings.php';
 require __DIR__ . '/../includes/class-abchat-chatbot.php';
+require __DIR__ . '/../includes/class-abchat-gemini.php';
 
 $pass = 0; $fail = 0;
 function ok( $cond, $label ) {
@@ -51,6 +57,8 @@ $defaults = ABChat_Settings::defaults();
 ok( $defaults['enabled'] === 1, 'widget enabled by default' );
 ok( count( $defaults['bot_flows'] ) === 3, 'three starter bot flows' );
 ok( $defaults['primary_color'] === '#0b7d3e', 'brand green default' );
+ok( $defaults['bot_ai_enabled'] === 0, 'Gemini disabled by default' );
+ok( $defaults['gemini_model'] === 'gemini-2.5-flash', 'Gemini model has a portable default' );
 
 echo "== Office hours ==\n";
 // Disabled => always open.
@@ -94,6 +102,34 @@ ok( $r['handoff'] === true, 'unmatched free text routes to a human' );
 $r = $bot->respond( 1, '', 'courses' );
 ok( strpos( strtolower( $r['reply'] ), 'live and self-paced' ) !== false, 'explicit flow_id returns that flow answer' );
 
+echo "== Gemini fallback backend ==\n";
+$gemini = new ABChat_Gemini();
+$rule   = array( 'reply' => 'Rule reply', 'handoff' => false );
+ABChat_Settings::update( array( 'bot_ai_enabled' => 0, 'gemini_api_key' => 'test-key' ) );
+ok( $gemini->filter_response( $rule, 'Question', 1 ) === $rule, 'disabled Gemini preserves rule response' );
+
+ABChat_Settings::update( array( 'bot_ai_enabled' => 1, 'gemini_api_key' => 'test-key', 'gemini_model' => 'gemini-2.5-flash' ) );
+$__remote_response = array(
+	'response' => array( 'code' => 200 ),
+	'body'     => wp_json_encode( array( 'candidates' => array( array( 'content' => array( 'parts' => array( array( 'text' => 'Gemini reply' ) ) ) ) ) ) ),
+);
+$ai = $gemini->filter_response( $rule, 'Question', 1 );
+ok( 'Gemini reply' === $ai['reply'] && false === $ai['handoff'], 'valid Gemini response overrides rule response' );
+ok( false !== strpos( $__remote_request['url'], 'gemini-2.5-flash:generateContent' ), 'configured Gemini model used in request' );
+ok( false === strpos( $__remote_request['url'], 'test-key' ) && 'test-key' === $__remote_request['args']['headers']['x-goog-api-key'], 'Gemini key sent in header instead of URL' );
+
+$__remote_response = array(
+	'response' => array( 'code' => 200 ),
+	'body'     => wp_json_encode( array( 'candidates' => array( array( 'content' => array( 'parts' => array( array( 'text' => 'HANDOFF' ) ) ) ) ) ) ),
+);
+$ai = $gemini->filter_response( $rule, 'Question', 1 );
+ok( true === $ai['handoff'] && ABChat_Settings::get( 'bot_fallback' ) === $ai['reply'], 'Gemini hand-off uses configured fallback' );
+
+$__remote_response = new WP_Error();
+ok( $gemini->filter_response( $rule, 'Question', 1 ) === $rule, 'Gemini transport error preserves rule response' );
+$__remote_response = array( 'response' => array( 'code' => 429 ), 'body' => '{}' );
+ok( $gemini->filter_response( $rule, 'Question', 1 ) === $rule, 'Gemini API error preserves rule response' );
+
 echo "== VAPID key generation ==\n";
 require __DIR__ . '/../includes/class-abchat-notifications.php';
 $keys = ABChat_Notifications::vapid_keys();
@@ -131,6 +167,7 @@ ok( ABChat_Settings::get( '_label', 'MISSING' ) === 'MISSING', 'underscore meta 
 $json = ABChat_Presets::export();
 $decoded = json_decode( $json, true );
 ok( is_array( $decoded ) && isset( $decoded['brand_name'] ), 'export produces valid settings JSON' );
+ok( ! isset( $decoded['gemini_api_key'] ), 'export omits Gemini API key' );
 ABChat_Settings::update( array( 'brand_name' => 'Changed' ) );
 ABChat_Presets::import( $decoded );
 ok( ABChat_Settings::get( 'brand_name' ) === 'Abibitumi', 'import restores exported brand name' );

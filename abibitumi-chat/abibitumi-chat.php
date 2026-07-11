@@ -37,6 +37,7 @@ require_once ABCHAT_DIR . 'includes/class-abchat-presets.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-activator.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-rest.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-chatbot.php';
+require_once ABCHAT_DIR . 'includes/class-abchat-gemini.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-notifications.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-widget.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-admin.php';

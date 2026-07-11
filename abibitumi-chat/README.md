@@ -81,52 +81,22 @@ the dashboard is closed.
 
 ## Chatbot AI backend (optional, free tiers work)
 
-The bot is rule-based out of the box (no API key, no cost). To make it answer
-free-form questions, hook an LLM into the `abchat_bot_response` filter. Any
-provider with a **free API tier** is enough for a small site — e.g. Google
-Gemini (Google AI Studio), Groq (Llama), or a self-hosted Ollama model. Drop
-this in a small mu-plugin or your theme's `functions.php`:
+The bot is rule-based out of the box (no API key, no cost). An optional Google
+Gemini backend is built in for free-form questions. In **Chat → Settings →
+Chatbot**, enable Gemini, keep the default `gemini-2.5-flash` model (or enter
+another model), and provide a Google AI Studio API key.
 
-```php
-add_filter( 'abchat_bot_response', function ( $reply, $text, $conversation_id ) {
-    $key = defined( 'ABCHAT_LLM_KEY' ) ? ABCHAT_LLM_KEY : getenv( 'ABCHAT_LLM_KEY' );
-    if ( ! $key || '' === trim( $text ) ) {
-        return $reply; // fall back to the rule engine
-    }
+For stronger isolation, put the key in `wp-config.php` as
+`define( 'ABCHAT_GEMINI_API_KEY', '…' );` or set the
+`ABCHAT_GEMINI_API_KEY` environment variable. Either takes precedence over the
+admin field. Saved keys are never rendered back into the settings page or
+included in settings exports.
 
-    // Example: Google Gemini free tier (swap the URL/body for Groq/OpenAI/etc).
-    $res = wp_remote_post(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . rawurlencode( $key ),
-        array(
-            'timeout' => 12,
-            'headers' => array( 'Content-Type' => 'application/json' ),
-            'body'    => wp_json_encode( array(
-                'system_instruction' => array( 'parts' => array( array(
-                    'text' => 'You are a friendly support agent for ' . get_bloginfo( 'name' ) .
-                              '. Answer briefly. If you are unsure or the user needs a human, reply exactly HANDOFF.',
-                ) ) ),
-                'contents' => array( array( 'parts' => array( array( 'text' => $text ) ) ) ),
-            ) ),
-        )
-    );
-    if ( is_wp_error( $res ) ) {
-        return $reply;
-    }
-    $data = json_decode( wp_remote_retrieve_body( $res ), true );
-    $out  = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
-    if ( '' === $out ) {
-        return $reply;
-    }
-    if ( false !== stripos( $out, 'HANDOFF' ) ) {
-        return array( 'reply' => 'Let me connect you with a team member.', 'handoff' => true );
-    }
-    return array( 'reply' => $out, 'handoff' => false );
-}, 10, 3 );
-```
-
-Keep the key in `wp-config.php` (`define( 'ABCHAT_LLM_KEY', '…' );`) or an env
-var — never in the repo. Because the filter can return `handoff => true`, the
-LLM can escalate to a human exactly like the built-in rules.
+Gemini runs behind the existing `abchat_bot_response` filter. Network errors,
+rate limits, invalid responses, and empty answers fall back gracefully to the
+rule engine. A response containing only `HANDOFF` escalates to a human using
+the configured fallback message. Other providers can still replace the result
+through the same filter at a different priority.
 
 ## Extending
 - `abchat_bot_response` (filter) — return a string or

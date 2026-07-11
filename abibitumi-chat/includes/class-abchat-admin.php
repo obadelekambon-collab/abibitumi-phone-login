@@ -213,6 +213,8 @@ class ABChat_Admin {
 			'bot_name'            => $text( 'bot_name' ),
 			'bot_greeting'        => sanitize_textarea_field( isset( $in['bot_greeting'] ) ? $in['bot_greeting'] : '' ),
 			'bot_fallback'        => sanitize_textarea_field( isset( $in['bot_fallback'] ) ? $in['bot_fallback'] : '' ),
+			'bot_ai_enabled'      => $checkbox( 'bot_ai_enabled' ),
+			'gemini_model'        => preg_replace( '/[^a-zA-Z0-9._-]/', '', $text( 'gemini_model', 'gemini-2.5-flash' ) ),
 			'notify_email'        => sanitize_email( isset( $in['notify_email'] ) ? $in['notify_email'] : '' ),
 			'notify_new_chat'     => $checkbox( 'notify_new_chat' ),
 			'notify_offline'      => $checkbox( 'notify_offline' ),
@@ -221,6 +223,12 @@ class ABChat_Admin {
 			'pwa_short_name'      => $text( 'pwa_short_name', 'Chat' ),
 			'pwa_theme_color'     => sanitize_hex_color( isset( $in['pwa_theme_color'] ) ? $in['pwa_theme_color'] : '#0b7d3e' ),
 		);
+
+		if ( ! empty( $in['gemini_api_key'] ) ) {
+			$values['gemini_api_key'] = sanitize_text_field( $in['gemini_api_key'] );
+		} elseif ( ! empty( $in['gemini_api_key_clear'] ) ) {
+			$values['gemini_api_key'] = '';
+		}
 
 		// Office hours grid.
 		if ( isset( $in['office_hours'] ) && is_array( $in['office_hours'] ) ) {

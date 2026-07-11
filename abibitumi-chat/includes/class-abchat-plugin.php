@@ -47,6 +47,13 @@ class ABChat_Plugin {
 	public $pwa;
 
 	/**
+	 * Gemini chatbot backend.
+	 *
+	 * @var ABChat_Gemini
+	 */
+	public $gemini;
+
+	/**
 	 * Boot.
 	 */
 	public function __construct() {
@@ -57,11 +64,13 @@ class ABChat_Plugin {
 		$this->admin         = new ABChat_Admin();
 		$this->notifications = new ABChat_Notifications();
 		$this->pwa           = new ABChat_PWA();
+		$this->gemini        = new ABChat_Gemini();
 
 		$this->rest->init();
 		$this->widget->init();
 		$this->notifications->init();
 		$this->pwa->init();
+		$this->gemini->init();
 
 		if ( is_admin() ) {
 			$this->admin->init();

@@ -69,6 +69,9 @@ class ABChat_Settings {
 			'bot_greeting'       => __( 'Welcome! I can answer common questions or connect you with a person.', 'abibitumi-chat' ),
 			'bot_fallback'       => __( 'Let me connect you with a team member.', 'abibitumi-chat' ),
 			'bot_flows'          => self::default_flows(),
+			'bot_ai_enabled'     => 0,
+			'gemini_api_key'     => '',
+			'gemini_model'       => 'gemini-2.5-flash',
 
 			// Notifications.
 			'notify_email'       => get_option( 'admin_email' ),
