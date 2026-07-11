@@ -692,7 +692,7 @@ class ABChat_REST {
 		$type = $req->get_param( 'type' );
 		$type = $type ? sanitize_key( $type ) : 'text';
 
-		if ( '' === $body && 'file' !== $type ) {
+		if ( '' === $body ) {
 			return new WP_Error( 'abchat_empty', __( 'Message is empty.', 'abibitumi-chat' ), array( 'status' => 400 ) );
 		}
 
@@ -707,9 +707,7 @@ class ABChat_REST {
 			'sender_id'       => $user->ID,
 			'sender_name'     => $user->display_name,
 			'body'            => $body,
-			'type'            => ( 'note' === $type ) ? 'note' : $type,
-			'attachment_url'  => $req->get_param( 'attachment_url' ),
-			'attachment_name' => $req->get_param( 'attachment_name' ),
+			'type'            => ( 'note' === $type ) ? 'note' : 'text',
 		) );
 
 		delete_transient( 'abchat_typing_' . $convo->id . '_operator' );

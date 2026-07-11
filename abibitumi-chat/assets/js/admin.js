@@ -211,9 +211,9 @@
 		var row = el( 'div', 'abchat-m ' + ( mine_ ? 'out' : 'in' ) + ( 'bot' === m.senderType ? ' bot' : '' ) );
 		var inner = '';
 		if ( 'image' === m.type && m.attachment ) {
-			inner = '<a href="' + esc( m.attachment.url ) + '" target="_blank"><img src="' + esc( m.attachment.url ) + '"></a>';
+			inner = '<a href="' + esc( m.attachment.url ) + '" target="_blank" rel="noopener"><img src="' + esc( m.attachment.url ) + '"></a>';
 		} else if ( 'file' === m.type && m.attachment ) {
-			inner = '<a href="' + esc( m.attachment.url ) + '" target="_blank">📎 ' + esc( m.attachment.name ) + '</a>';
+			inner = '<a href="' + esc( m.attachment.url ) + '" target="_blank" rel="noopener">📎 ' + esc( m.attachment.name ) + '</a>';
 		} else {
 			inner = esc( m.body ).replace( /\n/g, '<br>' );
 		}

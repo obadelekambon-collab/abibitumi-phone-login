@@ -147,4 +147,28 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertSame( 'abchat_empty', $result->get_error_code() );
 	}
+
+	/**
+	 * Operator messages also use the dedicated validated upload endpoint.
+	 */
+	public function test_agent_message_rejects_caller_supplied_attachment_metadata() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+		$visitor = ABChat_DB::get_or_create_visitor( 'agent-attachment-bypass-token' );
+		$convo_id = ABChat_DB::create_conversation( array( 'visitor_id' => $visitor->id ) );
+		$request = new WP_REST_Request( 'POST', '/abchat/v1/agent/message' );
+		$request->set_param( 'conversation_id', $convo_id );
+		$request->set_param( 'body', 'Operator text' );
+		$request->set_param( 'type', 'image' );
+		$request->set_param( 'attachment_url', 'https://attacker.example/tracker.png' );
+		$request->set_param( 'attachment_name', 'tracker.png' );
+
+		$response = ( new ABChat_REST() )->agent_message( $request );
+		$this->assertSame( 200, $response->get_status() );
+		$messages = ABChat_DB::get_messages( $convo_id );
+		$message  = end( $messages );
+		$this->assertSame( 'text', $message->type );
+		$this->assertSame( '', $message->attachment_url );
+		$this->assertSame( '', $message->attachment_name );
+	}
 }
