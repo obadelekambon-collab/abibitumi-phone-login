@@ -40,6 +40,7 @@ require_once ABCHAT_DIR . 'includes/class-abchat-stream.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-chatbot.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-gemini.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-notifications.php';
+require_once ABCHAT_DIR . 'includes/class-abchat-privacy.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-widget.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-admin.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-pwa.php';

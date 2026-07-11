@@ -23,6 +23,7 @@ settings.
 | **Visitor tracking** | Online visitor list, current page, referrer, IP, device, registered-member detection |
 | **Ratings** | Post-chat 1–5 star satisfaction rating + comment |
 | **Analytics** | Conversations, resolved, messages, average rating, per-day chart |
+| **Privacy** | WordPress personal-data export and erasure for visitor profiles and transcripts |
 | **Notifications** | Agent email on new chat / offline lead / hand-off, visitor transcript email on close, browser notifications, Web Push |
 | **PWA** | Web app manifest + service worker, installable agent app, offline shell, push notifications |
 | **Departments** | Multiple queues with routing |

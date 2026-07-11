@@ -26,6 +26,7 @@ function wp_json_encode( $v, $opts = 0 ) { return json_encode( $v, $opts ); }
 function current_time( $type ) { return ( 'timestamp' === $type ) ? time() : date( 'Y-m-d H:i:s' ); }
 function wp_date( $fmt, $ts = null ) { return date( $fmt, $ts ?: time() ); }
 function sanitize_file_name( $s ) { return preg_replace( '/[^a-zA-Z0-9._-]/', '', $s ); }
+function sanitize_email( $s ) { return filter_var( $s, FILTER_SANITIZE_EMAIL ); }
 function wp_kses_post( $s ) { return $s; }
 function wp_parse_url( $url, $c = -1 ) { return parse_url( $url, $c ); }
 function home_url( $p = '' ) { return 'https://abibitumi.com' . $p; }
@@ -63,6 +64,8 @@ class ABChat_DB {
 	public static $messages = array();
 	public static function add_message( $d ) { self::$messages[] = $d; return count( self::$messages ); }
 	public static function update_conversation( $id, $d ) {}
+	public static function privacy_records( $email ) { return array(); }
+	public static function erase_privacy_records( $email ) { return 'person@example.com' === $email ? 1 : 0; }
 }
 
 require __DIR__ . '/../includes/class-abchat-settings.php';
@@ -70,6 +73,7 @@ require __DIR__ . '/../includes/class-abchat-chatbot.php';
 require __DIR__ . '/../includes/class-abchat-gemini.php';
 require __DIR__ . '/../includes/class-abchat-rest.php';
 require __DIR__ . '/../includes/class-abchat-stream.php';
+require __DIR__ . '/../includes/class-abchat-privacy.php';
 
 $pass = 0; $fail = 0;
 function ok( $cond, $label ) {
@@ -189,6 +193,17 @@ $request          = new ABChat_Test_REST_Request( ABChat_Stream::VISITOR_ROUTE )
 ok( false === $stream_transport->serve( false, new WP_REST_Response( null, 401 ), $request, null ), 'failed visitor authentication is not intercepted as a stream' );
 $request = new ABChat_Test_REST_Request( ABChat_Stream::AGENT_ROUTE );
 ok( false === $stream_transport->serve( false, new WP_REST_Response( null, 200 ), $request, null ), 'agent stream rechecks operator capability' );
+
+echo "== WordPress privacy integration ==\n";
+$privacy   = new ABChat_Privacy();
+$exporters = $privacy->register_exporter( array() );
+$erasers   = $privacy->register_eraser( array() );
+ok( isset( $exporters['abibitumi-chat']['callback'] ), 'personal-data exporter registered' );
+ok( isset( $erasers['abibitumi-chat']['callback'] ), 'personal-data eraser registered' );
+$export = $privacy->export( 'person@example.com' );
+ok( true === $export['done'] && array() === $export['data'], 'privacy exporter completes cleanly without matching records' );
+$erased = $privacy->erase( 'person@example.com' );
+ok( true === $erased['items_removed'] && true === $erased['done'], 'privacy eraser reports removed records' );
 
 echo "== VAPID key generation ==\n";
 require __DIR__ . '/../includes/class-abchat-notifications.php';

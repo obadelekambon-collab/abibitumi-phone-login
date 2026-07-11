@@ -61,6 +61,13 @@ class ABChat_Plugin {
 	public $stream;
 
 	/**
+	 * WordPress privacy integration.
+	 *
+	 * @var ABChat_Privacy
+	 */
+	public $privacy;
+
+	/**
 	 * Boot.
 	 */
 	public function __construct() {
@@ -73,6 +80,7 @@ class ABChat_Plugin {
 		$this->pwa           = new ABChat_PWA();
 		$this->gemini        = new ABChat_Gemini();
 		$this->stream        = new ABChat_Stream();
+		$this->privacy       = new ABChat_Privacy();
 
 		$this->rest->init();
 		$this->widget->init();
@@ -80,6 +88,7 @@ class ABChat_Plugin {
 		$this->pwa->init();
 		$this->gemini->init();
 		$this->stream->init();
+		$this->privacy->init();
 
 		if ( is_admin() ) {
 			$this->admin->init();

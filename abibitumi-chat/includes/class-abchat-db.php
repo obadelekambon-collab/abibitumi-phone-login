@@ -107,6 +107,53 @@ class ABChat_DB {
 		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET is_online = 0 WHERE last_seen < %s AND is_online = 1", $cutoff ) ); // phpcs:ignore WordPress.DB
 	}
 
+	/**
+	 * Fetch visitor, conversation, and message records for a privacy request.
+	 *
+	 * @param string $email Visitor email.
+	 * @return array
+	 */
+	public static function privacy_records( $email ) {
+		global $wpdb;
+		$visitors = self::table( 'visitors' );
+		$convos   = self::table( 'conversations' );
+		$rows     = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$visitors} WHERE email = %s ORDER BY id ASC", $email ) ); // phpcs:ignore WordPress.DB
+		$out      = array();
+
+		foreach ( (array) $rows as $visitor ) {
+			$visitor->conversations = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$convos} WHERE visitor_id = %d ORDER BY id ASC", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
+			foreach ( (array) $visitor->conversations as $conversation ) {
+				$conversation->messages = self::get_messages( $conversation->id );
+			}
+			$out[] = $visitor;
+		}
+		return $out;
+	}
+
+	/**
+	 * Erase visitor records and their conversation transcripts by email.
+	 *
+	 * @param string $email Visitor email.
+	 * @return int Number of visitor records erased.
+	 */
+	public static function erase_privacy_records( $email ) {
+		global $wpdb;
+		$visitors = self::table( 'visitors' );
+		$convos   = self::table( 'conversations' );
+		$messages = self::table( 'messages' );
+		$rows     = $wpdb->get_results( $wpdb->prepare( "SELECT id FROM {$visitors} WHERE email = %s", $email ) ); // phpcs:ignore WordPress.DB
+
+		foreach ( (array) $rows as $visitor ) {
+			$conversation_ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$convos} WHERE visitor_id = %d", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
+			foreach ( (array) $conversation_ids as $conversation_id ) {
+				$wpdb->query( $wpdb->prepare( "DELETE FROM {$messages} WHERE conversation_id = %d", (int) $conversation_id ) ); // phpcs:ignore WordPress.DB
+			}
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$convos} WHERE visitor_id = %d", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$visitors} WHERE id = %d", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
+		}
+		return count( $rows );
+	}
+
 	/* --------------------------------------------------------------------- */
 	/* Conversations                                                         */
 	/* --------------------------------------------------------------------- */
