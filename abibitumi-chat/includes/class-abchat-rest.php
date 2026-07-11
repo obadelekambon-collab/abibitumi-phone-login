@@ -76,7 +76,7 @@ class ABChat_REST {
 		register_rest_route( self::NS, '/upload', array(
 			'methods'             => 'POST',
 			'callback'            => array( $this, 'upload' ),
-			'permission_callback' => $visitor,
+			'permission_callback' => array( $this, 'upload_permission' ),
 		) );
 
 		// ---- Agent ------------------------------------------------------ //
@@ -189,6 +189,19 @@ class ABChat_REST {
 	 */
 	public function agent_permission() {
 		return current_user_can( ABCHAT_AGENT_CAP );
+	}
+
+	/**
+	 * Upload permission: an operator capability or a valid visitor token.
+	 *
+	 * @param WP_REST_Request $req Request.
+	 * @return true|WP_Error
+	 */
+	public function upload_permission( $req ) {
+		if ( current_user_can( ABCHAT_AGENT_CAP ) ) {
+			return true;
+		}
+		return $this->visitor_permission( $req );
 	}
 
 	/**
@@ -600,7 +613,7 @@ class ABChat_REST {
 	}
 
 	/**
-	 * File upload from a visitor.
+	 * Validated file upload from a visitor or operator.
 	 *
 	 * @param WP_REST_Request $req Request.
 	 * @return WP_REST_Response|WP_Error
@@ -610,9 +623,25 @@ class ABChat_REST {
 			return new WP_Error( 'abchat_uploads_off', __( 'File uploads are disabled.', 'abibitumi-chat' ), array( 'status' => 403 ) );
 		}
 		$visitor = $req->get_param( '_visitor' );
-		$convo   = $this->owned_conversation( (int) $req->get_param( 'conversation_id' ), $visitor );
-		if ( is_wp_error( $convo ) ) {
-			return $convo;
+		if ( $visitor ) {
+			$convo = $this->owned_conversation( (int) $req->get_param( 'conversation_id' ), $visitor );
+			if ( is_wp_error( $convo ) ) {
+				return $convo;
+			}
+			$sender_type = 'visitor';
+			$sender_id   = $visitor->id;
+			$sender_name = $visitor->name;
+		} elseif ( current_user_can( ABCHAT_AGENT_CAP ) ) {
+			$convo = ABChat_DB::get_conversation( (int) $req->get_param( 'conversation_id' ) );
+			if ( ! $convo ) {
+				return new WP_Error( 'abchat_not_found', __( 'Not found.', 'abibitumi-chat' ), array( 'status' => 404 ) );
+			}
+			$user        = wp_get_current_user();
+			$sender_type = 'operator';
+			$sender_id   = $user->ID;
+			$sender_name = $user->display_name;
+		} else {
+			return new WP_Error( 'abchat_forbidden', __( 'Upload not permitted.', 'abibitumi-chat' ), array( 'status' => 403 ) );
 		}
 
 		$files = $req->get_file_params();
@@ -620,7 +649,7 @@ class ABChat_REST {
 			return new WP_Error( 'abchat_no_file', __( 'No file provided.', 'abibitumi-chat' ), array( 'status' => 400 ) );
 		}
 
-		return $this->handle_upload( $files['file'], $convo->id, 'visitor', $visitor->id, $visitor->name );
+		return $this->handle_upload( $files['file'], $convo->id, $sender_type, $sender_id, $sender_name );
 	}
 
 	/* --------------------------------------------------------------------- */

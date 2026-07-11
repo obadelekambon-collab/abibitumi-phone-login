@@ -171,4 +171,25 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( '', $message->attachment_url );
 		$this->assertSame( '', $message->attachment_name );
 	}
+
+	/**
+	 * Operators can reach the shared upload route without a visitor token.
+	 */
+	public function test_operator_can_authorize_shared_upload_route() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+		$request = new WP_REST_Request( 'POST', '/abchat/v1/upload' );
+		$this->assertTrue( ( new ABChat_REST() )->upload_permission( $request ) );
+	}
+
+	/**
+	 * Anonymous uploads still require a valid visitor token.
+	 */
+	public function test_anonymous_shared_upload_route_requires_visitor_token() {
+		wp_set_current_user( 0 );
+		$request = new WP_REST_Request( 'POST', '/abchat/v1/upload' );
+		$result  = ( new ABChat_REST() )->upload_permission( $request );
+		$this->assertWPError( $result );
+		$this->assertSame( 'abchat_no_token', $result->get_error_code() );
+	}
 }
