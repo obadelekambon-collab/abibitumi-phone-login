@@ -79,6 +79,55 @@ the dashboard is closed.
 - `abchat_manage` — edit settings (auto-granted to admin).
 - **Chat Operator** role — a light role for support staff.
 
+## Chatbot AI backend (optional, free tiers work)
+
+The bot is rule-based out of the box (no API key, no cost). To make it answer
+free-form questions, hook an LLM into the `abchat_bot_response` filter. Any
+provider with a **free API tier** is enough for a small site — e.g. Google
+Gemini (Google AI Studio), Groq (Llama), or a self-hosted Ollama model. Drop
+this in a small mu-plugin or your theme's `functions.php`:
+
+```php
+add_filter( 'abchat_bot_response', function ( $reply, $text, $conversation_id ) {
+    $key = defined( 'ABCHAT_LLM_KEY' ) ? ABCHAT_LLM_KEY : getenv( 'ABCHAT_LLM_KEY' );
+    if ( ! $key || '' === trim( $text ) ) {
+        return $reply; // fall back to the rule engine
+    }
+
+    // Example: Google Gemini free tier (swap the URL/body for Groq/OpenAI/etc).
+    $res = wp_remote_post(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . rawurlencode( $key ),
+        array(
+            'timeout' => 12,
+            'headers' => array( 'Content-Type' => 'application/json' ),
+            'body'    => wp_json_encode( array(
+                'system_instruction' => array( 'parts' => array( array(
+                    'text' => 'You are a friendly support agent for ' . get_bloginfo( 'name' ) .
+                              '. Answer briefly. If you are unsure or the user needs a human, reply exactly HANDOFF.',
+                ) ) ),
+                'contents' => array( array( 'parts' => array( array( 'text' => $text ) ) ) ),
+            ) ),
+        )
+    );
+    if ( is_wp_error( $res ) ) {
+        return $reply;
+    }
+    $data = json_decode( wp_remote_retrieve_body( $res ), true );
+    $out  = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+    if ( '' === $out ) {
+        return $reply;
+    }
+    if ( false !== stripos( $out, 'HANDOFF' ) ) {
+        return array( 'reply' => 'Let me connect you with a team member.', 'handoff' => true );
+    }
+    return array( 'reply' => $out, 'handoff' => false );
+}, 10, 3 );
+```
+
+Keep the key in `wp-config.php` (`define( 'ABCHAT_LLM_KEY', '…' );`) or an env
+var — never in the repo. Because the filter can return `handoff => true`, the
+LLM can escalate to a human exactly like the built-in rules.
+
 ## Extending
 - `abchat_bot_response` (filter) — return a string or
   `{ reply, quickReplies, handoff }` to swap the rule engine for an LLM.
