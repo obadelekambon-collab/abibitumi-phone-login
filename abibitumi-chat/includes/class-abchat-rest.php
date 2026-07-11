@@ -370,8 +370,7 @@ class ABChat_REST {
 		}
 
 		$body = trim( (string) $req->get_param( 'body' ) );
-		$type = $req->get_param( 'type' );
-		if ( '' === $body && 'file' !== $type ) {
+		if ( '' === $body ) {
 			return new WP_Error( 'abchat_empty', __( 'Message is empty.', 'abibitumi-chat' ), array( 'status' => 400 ) );
 		}
 
@@ -381,9 +380,7 @@ class ABChat_REST {
 			'sender_id'       => $visitor->id,
 			'sender_name'     => $visitor->name ? $visitor->name : __( 'Visitor', 'abibitumi-chat' ),
 			'body'            => $body,
-			'type'            => $type ? sanitize_key( $type ) : 'text',
-			'attachment_url'  => $req->get_param( 'attachment_url' ),
-			'attachment_name' => $req->get_param( 'attachment_name' ),
+			'type'            => 'text',
 		) );
 
 		// Reopen if it had been closed.

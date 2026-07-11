@@ -107,4 +107,44 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( '192.0.2.40', ABChat_DB::client_ip() );
 		unset( $_SERVER['HTTP_X_FORWARDED_FOR'], $_SERVER['HTTP_CF_CONNECTING_IP'] );
 	}
+
+	/**
+	 * Visitor messages cannot bypass the validated upload endpoint.
+	 */
+	public function test_visitor_message_rejects_caller_supplied_attachment_metadata() {
+		$visitor = ABChat_DB::get_or_create_visitor( 'attachment-bypass-token' );
+		$convo_id = ABChat_DB::create_conversation( array( 'visitor_id' => $visitor->id ) );
+		$request = new WP_REST_Request( 'POST', '/abchat/v1/message' );
+		$request->set_param( '_visitor', $visitor );
+		$request->set_param( 'conversation_id', $convo_id );
+		$request->set_param( 'body', 'Ordinary text' );
+		$request->set_param( 'type', 'image' );
+		$request->set_param( 'attachment_url', 'https://attacker.example/tracker.png' );
+		$request->set_param( 'attachment_name', 'tracker.png' );
+
+		$response = ( new ABChat_REST() )->visitor_message( $request );
+		$this->assertSame( 200, $response->get_status() );
+		$messages = ABChat_DB::get_messages( $convo_id );
+		$message  = end( $messages );
+		$this->assertSame( 'text', $message->type );
+		$this->assertSame( '', $message->attachment_url );
+		$this->assertSame( '', $message->attachment_name );
+	}
+
+	/**
+	 * A fake file type cannot make an empty visitor message valid.
+	 */
+	public function test_visitor_message_rejects_empty_fake_file_message() {
+		$visitor = ABChat_DB::get_or_create_visitor( 'empty-file-token' );
+		$convo_id = ABChat_DB::create_conversation( array( 'visitor_id' => $visitor->id ) );
+		$request = new WP_REST_Request( 'POST', '/abchat/v1/message' );
+		$request->set_param( '_visitor', $visitor );
+		$request->set_param( 'conversation_id', $convo_id );
+		$request->set_param( 'body', '' );
+		$request->set_param( 'type', 'file' );
+
+		$result = ( new ABChat_REST() )->visitor_message( $request );
+		$this->assertWPError( $result );
+		$this->assertSame( 'abchat_empty', $result->get_error_code() );
+	}
 }
