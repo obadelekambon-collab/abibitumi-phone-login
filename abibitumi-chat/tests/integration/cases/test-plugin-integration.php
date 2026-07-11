@@ -224,4 +224,15 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 'Public reply', $data['messages'][0]['body'] );
 		$this->assertStringNotContainsString( 'Private operator context', wp_json_encode( $data ) );
 	}
+
+	/**
+	 * Conversation exports neutralize spreadsheet formula injection.
+	 */
+	public function test_csv_export_cells_neutralize_formulas() {
+		$this->assertSame( "'=HYPERLINK(\"https://attacker.example\")", ABChat_Admin::csv_safe_cell( '=HYPERLINK("https://attacker.example")' ) );
+		$this->assertSame( "'  +cmd", ABChat_Admin::csv_safe_cell( '  +cmd' ) );
+		$this->assertSame( "'\t@SUM(1,1)", ABChat_Admin::csv_safe_cell( "\t@SUM(1,1)" ) );
+		$this->assertSame( 'Ordinary message', ABChat_Admin::csv_safe_cell( 'Ordinary message' ) );
+		$this->assertSame( '123', ABChat_Admin::csv_safe_cell( 123 ) );
+	}
 }

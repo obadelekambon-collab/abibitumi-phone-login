@@ -396,7 +396,7 @@ class ABChat_Admin {
 		foreach ( (array) $messages as $message ) {
 			fputcsv( // phpcs:ignore WordPress.WP.AlternativeFunctions
 				$output,
-				array(
+				array_map( array( __CLASS__, 'csv_safe_cell' ), array(
 					$conversation_id,
 					(int) $message->id,
 					$message->created_at,
@@ -407,11 +407,25 @@ class ABChat_Admin {
 					$message->attachment_url,
 					$message->attachment_name,
 					$message->read_at,
-				)
+				) )
 			);
 		}
 		fclose( $output ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 		exit;
+	}
+
+	/**
+	 * Neutralize spreadsheet formulas in untrusted CSV cells.
+	 *
+	 * @param mixed $value Exported value.
+	 * @return string
+	 */
+	public static function csv_safe_cell( $value ) {
+		$value = (string) $value;
+		if ( preg_match( '/^[\x00-\x20]*[=+\-@]/', $value ) ) {
+			return "'" . $value;
+		}
+		return $value;
 	}
 
 	/**
