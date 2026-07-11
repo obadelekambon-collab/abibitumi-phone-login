@@ -18,7 +18,7 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 	 */
 	public function test_activation_creates_custom_tables() {
 		global $wpdb;
-		foreach ( array( 'visitors', 'conversations', 'messages', 'canned', 'push' ) as $name ) {
+		foreach ( array( 'visitors', 'conversations', 'messages', 'canned', 'push', 'page_views' ) as $name ) {
 			$table = ABChat_DB::table( $name );
 			$this->assertSame( $table, $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) );
 		}
@@ -51,6 +51,7 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		do_action( 'rest_api_init' );
 		$routes = rest_get_server()->get_routes();
 		$this->assertArrayHasKey( '/abchat/v1/session', $routes );
+		$this->assertArrayHasKey( '/abchat/v1/page-view', $routes );
 		$this->assertArrayHasKey( '/abchat/v1/bot', $routes );
 		$this->assertArrayHasKey( '/abchat/v1/stream', $routes );
 		$this->assertArrayHasKey( '/abchat/v1/agent/conversations', $routes );
@@ -77,6 +78,51 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 'support', $conversation->department );
 		$this->assertSame( $message_id, (int) $messages[0]->id );
 		$this->assertSame( 'Hello from WordPress.', $messages[0]->body );
+	}
+
+	/** Visitor journeys remain same-site, parameter-free, live, and bounded. */
+	public function test_visitor_page_journey_tracking() {
+		ABChat_Settings::update( array( 'journey_tracking' => 1, 'journey_limit' => 5 ) );
+		$visitor = ABChat_DB::get_or_create_visitor( 'journey-test-token' );
+		$request = new WP_REST_Request( 'POST', '/abchat/v1/page-view' );
+		$request->set_param( '_visitor', $visitor );
+		$request->set_param( 'url', home_url( '/membership/checkout/?email=private@example.com#payment' ) );
+		$request->set_param( 'title', 'Membership checkout' );
+		$response = ( new ABChat_REST() )->page_view( $request )->get_data();
+		$this->assertTrue( $response['stored'] );
+		$views = ABChat_DB::recent_page_views( $visitor->id, 20 );
+		$this->assertCount( 1, $views );
+		$this->assertSame( home_url( '/membership/checkout/' ), $views[0]->url );
+		$this->assertStringNotContainsString( 'private@example.com', $views[0]->url );
+		$this->assertSame( '', ABChat_DB::journey_url( 'https://attacker.example/track' ) );
+	}
+
+	/** Tidio migration persists closed history and deduplicates contacts/transcripts. */
+	public function test_tidio_historical_import_round_trip() {
+		$this->assertSame( 64, strlen( ABChat_DB::tidio_token( 'tidio-contact-1' ) ) );
+		$contacts = array( array( 'id' => 'tidio-contact-1', 'name' => 'Ama Mensah', 'email' => 'ama-import@example.com', 'phone' => '+233555123456' ) );
+		$first    = ABChat_Tidio_Importer::import_contacts( $contacts );
+		$second   = ABChat_Tidio_Importer::import_contacts( $contacts );
+		$this->assertSame( 1, $first['created'] );
+		$this->assertSame( 1, $second['updated'] );
+
+		$rows = array(
+			array( 'date' => '2025-01-02 03:04:05', 'sender' => 'Ama', 'sender_type' => 'visitor', 'message' => 'Hello', 'visitor_email' => 'ama-import@example.com' ),
+			array( 'date' => '2025-01-02 03:05:06', 'sender' => 'Agent', 'sender_type' => 'operator', 'message' => 'Welcome' ),
+		);
+		$first  = ABChat_Tidio_Importer::import_transcript( $rows, 'conversation.csv' );
+		$second = ABChat_Tidio_Importer::import_transcript( $rows, 'conversation.csv' );
+		$this->assertSame( 1, $first['conversations'] );
+		$this->assertSame( 2, $first['messages'] );
+		$this->assertSame( 0, $second['conversations'] );
+		$this->assertSame( 2, $second['skipped'] );
+		$digest = hash( 'sha256', wp_json_encode( array(
+			array( 'body' => 'Hello', 'sender_name' => 'Ama', 'sender_type' => 'visitor', 'created_at' => '2025-01-02 03:04:05' ),
+			array( 'body' => 'Welcome', 'sender_name' => 'Agent', 'sender_type' => 'operator', 'created_at' => '2025-01-02 03:05:06' ),
+		) ) );
+		$conversation = ABChat_DB::get_conversation( ABChat_DB::import_source_exists( $digest ) );
+		$this->assertSame( 'closed', $conversation->status );
+		$this->assertSame( 'tidio', $conversation->source );
 	}
 
 	/**

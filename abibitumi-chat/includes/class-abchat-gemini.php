@@ -29,8 +29,6 @@ class ABChat_Gemini {
 	 * @return string|array
 	 */
 	public function filter_response( $reply, $text, $conversation_id ) {
-		unset( $conversation_id );
-
 		$text = trim( wp_strip_all_tags( $text ) );
 		$key  = $this->api_key();
 		if ( ! ABChat_Settings::get( 'bot_ai_enabled' ) || '' === $key || '' === $text ) {
@@ -41,6 +39,7 @@ class ABChat_Gemini {
 		if ( '' === $model ) {
 			$model = 'gemini-2.5-flash';
 		}
+		$context = $this->journey_context( $conversation_id );
 
 		$response = wp_remote_post(
 			'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode( $model ) . ':generateContent',
@@ -57,8 +56,9 @@ class ABChat_Gemini {
 								array(
 									'text' => sprintf(
 										/* translators: %s: website name. */
-										__( 'You are a friendly support agent for %s. Answer briefly. If you are unsure or the visitor needs a person, reply exactly HANDOFF.', 'abibitumi-chat' ),
-										get_bloginfo( 'name' )
+									__( 'You are a friendly sales and onboarding support agent for %1$s. Answer briefly. Use the visitor journey only as context; never claim they viewed something not listed. Help them take the next relevant purchase or onboarding step without pressure. If you are unsure or the visitor needs a person, reply exactly HANDOFF.%2$s', 'abibitumi-chat' ),
+									get_bloginfo( 'name' ),
+									$context
 									),
 								),
 							),
@@ -92,6 +92,19 @@ class ABChat_Gemini {
 			'reply'   => $output,
 			'handoff' => false,
 		);
+	}
+
+	/** Build a small, privacy-safe page-journey context for the AI prompt. */
+	protected function journey_context( $conversation_id ) {
+		$conversation = ABChat_DB::get_conversation( (int) $conversation_id );
+		if ( ! $conversation ) {
+			return '';
+		}
+		$lines = array();
+		foreach ( ABChat_DB::recent_page_views( $conversation->visitor_id, 5 ) as $view ) {
+			$lines[] = '- ' . wp_strip_all_tags( $view->title ? $view->title : $view->url ) . ' (' . $view->url . ')';
+		}
+		return $lines ? "\nRecent visitor journey:\n" . implode( "\n", $lines ) : '';
 	}
 
 	/**

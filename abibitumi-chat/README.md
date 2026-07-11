@@ -20,7 +20,7 @@ settings.
 | **Chatbot** | Keyword flows, quick replies, knowledge-base article suggestions, auto-greeting, lead capture, human hand-off, office-hours away messages |
 | **Operator dashboard** | Three-pane inbox, open/pending/closed filters, search, assignment & transfer, internal notes, canned responses (`/shortcut`), visitor info panel, conversation CSV export |
 | **File sharing** | Images + documents both directions, size/type limits |
-| **Visitor tracking** | Online visitor list, current page, referrer, IP, device, registered-member detection |
+| **Visitor tracking** | Online visitor list, live current page, privacy-safe recent page journey, referrer, IP, device, registered-member detection |
 | **Ratings** | Post-chat 1–5 star satisfaction rating + comment |
 | **Analytics** | Conversations, resolved, messages, average rating, per-day chart |
 | **Privacy** | WordPress personal-data export and erasure for visitor profiles and transcripts |
@@ -30,6 +30,18 @@ settings.
 | **PWA** | Web app manifest + service worker, installable agent app, privacy-safe offline state, push notifications |
 | **Departments** | Multiple queues with routing |
 | **Office hours** | Weekly schedule, online/away status, away auto-reply |
+
+### Sales and onboarding page context
+
+When visitor journey tracking is enabled, the widget records same-site page
+changes while the visitor browses, including single-page-app navigation. Query
+strings and fragments are removed server-side before storage, off-site URLs are
+rejected, and only the configured bounded number of recent views is retained.
+Operators see the journey update in the visitor panel. The optional Gemini
+backend receives the five most recent safe page titles/URLs so it can suggest a
+relevant purchase or onboarding next step without guessing what the visitor
+has viewed. Journey data participates in WordPress privacy export, erasure, and
+retention cleanup.
 
 ## Architecture
 
@@ -198,6 +210,21 @@ Install the identical plugin on all three WordPress sites, then either:
 Import is schema-whitelisted (only known settings keys are accepted) and
 underscore-prefixed meta keys are stripped, so config files stay safe to pass
 between installs.
+
+## Migrating from Tidio
+
+Open **Chat → Tidio Migration** to import Tidio CSV exports. The importer has a
+validation-only mode enabled by default and accepts:
+
+- a Tidio contacts CSV (contacts are matched by email or Tidio ID); and
+- one or more Tidio conversation transcript CSV files.
+
+Imported transcripts are stored as closed historical conversations, never
+send live-chat notifications, and are deduplicated by a content digest. Run a
+validation pass first, back up the database, and rehearse the migration on
+staging. Tidio's transcript export does not include channel connections,
+operators, chatbot/Flow definitions, or attachment files, so those items must
+be configured or migrated separately.
 
 ## Verification
 `php test-logic.php` (see the scratchpad harness) exercises the settings

@@ -107,6 +107,223 @@ class ABChat_DB {
 		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET is_online = 0 WHERE last_seen < %s AND is_online = 1", $cutoff ) ); // phpcs:ignore WordPress.DB
 	}
 
+	/** Fetch a visitor by primary key. */
+	public static function get_visitor( $id ) {
+		global $wpdb;
+		$table = self::table( 'visitors' );
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", (int) $id ) ); // phpcs:ignore WordPress.DB
+	}
+
+	/** Strip sensitive URL data and reject off-site journey events. */
+	public static function journey_url( $url ) {
+		$url       = esc_url_raw( (string) $url );
+		$host      = wp_parse_url( $url, PHP_URL_HOST );
+		$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
+		if ( ! $url || ! $host || strtolower( $host ) !== strtolower( $site_host ) ) {
+			return '';
+		}
+		$scheme = wp_parse_url( $url, PHP_URL_SCHEME );
+		$path   = wp_parse_url( $url, PHP_URL_PATH );
+		return substr( $scheme . '://' . $host . ( $path ? $path : '/' ), 0, 2048 );
+	}
+
+	/** Record a deduplicated, bounded page view for an active visitor. */
+	public static function record_page_view( $visitor_id, $url, $title = '' ) {
+		global $wpdb;
+		$url = self::journey_url( $url );
+		if ( ! $url || ! ABChat_Settings::get( 'journey_tracking' ) ) {
+			return false;
+		}
+		$table = self::table( 'page_views' );
+		$last  = $wpdb->get_row( $wpdb->prepare( "SELECT url, viewed_at FROM {$table} WHERE visitor_id = %d ORDER BY id DESC LIMIT 1", (int) $visitor_id ) ); // phpcs:ignore WordPress.DB
+		if ( $last && $last->url === $url && strtotime( $last->viewed_at ) > current_time( 'timestamp' ) - 5 ) {
+			return false;
+		}
+		$ok = $wpdb->insert(
+			$table,
+			array(
+				'visitor_id' => (int) $visitor_id,
+				'url'        => $url,
+				'title'      => substr( sanitize_text_field( $title ), 0, 255 ),
+				'viewed_at'  => current_time( 'mysql' ),
+			)
+		); // phpcs:ignore WordPress.DB
+		if ( $ok ) {
+			self::update_visitor( $visitor_id, array( 'page_url' => $url, 'last_seen' => current_time( 'mysql' ), 'is_online' => 1 ) );
+			$limit = max( 5, min( 100, (int) ABChat_Settings::get( 'journey_limit', 20 ) ) );
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$table} WHERE visitor_id = %d AND id NOT IN (SELECT id FROM (SELECT id FROM {$table} WHERE visitor_id = %d ORDER BY id DESC LIMIT %d) recent_views)",
+					(int) $visitor_id,
+					(int) $visitor_id,
+					$limit
+				)
+			); // phpcs:ignore WordPress.DB
+		}
+		return (bool) $ok;
+	}
+
+	/** Return the visitor's recent journey in chronological order. */
+	public static function recent_page_views( $visitor_id, $limit = 20 ) {
+		global $wpdb;
+		$table = self::table( 'page_views' );
+		$limit = max( 1, min( 100, (int) $limit ) );
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT url, title, viewed_at FROM {$table} WHERE visitor_id = %d ORDER BY id DESC LIMIT %d", (int) $visitor_id, $limit ) ); // phpcs:ignore WordPress.DB
+		return array_reverse( (array) $rows );
+	}
+
+	/**
+	 * Locate a historical visitor imported from Tidio.
+	 *
+	 * @param string $email    Contact email.
+	 * @param string $tidio_id Tidio contact id.
+	 * @return object|null
+	 */
+	public static function find_imported_visitor( $email, $tidio_id ) {
+		global $wpdb;
+		$table = self::table( 'visitors' );
+		$token = $tidio_id ? self::tidio_token( $tidio_id ) : '';
+		if ( $email && $token ) {
+			return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE email = %s OR token = %s ORDER BY id ASC LIMIT 1", $email, $token ) ); // phpcs:ignore WordPress.DB
+		}
+		if ( $email ) {
+			return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE email = %s ORDER BY id ASC LIMIT 1", $email ) ); // phpcs:ignore WordPress.DB
+		}
+		if ( $token ) {
+			return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE token = %s LIMIT 1", $token ) ); // phpcs:ignore WordPress.DB
+		}
+		return null;
+	}
+
+	/**
+	 * Create an offline historical visitor.
+	 *
+	 * @param array $data Imported fields.
+	 * @return int
+	 */
+	public static function create_imported_visitor( $data ) {
+		global $wpdb;
+		$tidio_id = isset( $data['tidio_id'] ) ? $data['tidio_id'] : '';
+		$token    = $tidio_id ? self::tidio_token( $tidio_id ) : 'tidio_' . wp_generate_password( 40, false, false );
+		$row      = array(
+			'token'      => $token,
+			'name'       => isset( $data['name'] ) ? sanitize_text_field( $data['name'] ) : '',
+			'email'      => isset( $data['email'] ) ? sanitize_email( $data['email'] ) : '',
+			'phone'      => isset( $data['phone'] ) ? sanitize_text_field( $data['phone'] ) : '',
+			'wp_user_id' => null,
+			'ip'         => '',
+			'user_agent' => '',
+			'page_url'   => '',
+			'referrer'   => '',
+			'first_seen' => isset( $data['created_at'] ) ? $data['created_at'] : current_time( 'mysql' ),
+			'last_seen'  => isset( $data['last_seen'] ) ? $data['last_seen'] : current_time( 'mysql' ),
+			'is_online'  => 0,
+		);
+		$ok = $wpdb->insert( self::table( 'visitors' ), $row ); // phpcs:ignore WordPress.DB
+		return $ok ? (int) $wpdb->insert_id : 0;
+	}
+
+	/** Build a stable Tidio visitor token that fits the 64-character column. */
+	public static function tidio_token( $tidio_id ) {
+		return 'tidio_' . substr( hash( 'sha256', (string) $tidio_id ), 0, 58 );
+	}
+
+	/** Update non-empty imported contact fields. */
+	public static function update_imported_visitor( $id, $data ) {
+		global $wpdb;
+		$clean = array();
+		foreach ( array( 'name', 'email', 'phone' ) as $key ) {
+			if ( ! empty( $data[ $key ] ) ) {
+				$clean[ $key ] = $data[ $key ];
+			}
+		}
+		if ( ! empty( $data['last_seen'] ) ) {
+			$clean['last_seen'] = $data['last_seen'];
+		}
+		if ( $clean ) {
+			$wpdb->update( self::table( 'visitors' ), $clean, array( 'id' => (int) $id ) ); // phpcs:ignore WordPress.DB
+		}
+	}
+
+	/** Check whether a content-identical transcript was already imported. */
+	public static function import_source_exists( $source_id ) {
+		global $wpdb;
+		$table   = self::table( 'conversations' );
+		$subject = 'Tidio import [' . $source_id . ']';
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE source = %s AND subject = %s LIMIT 1", 'tidio', $subject ) ); // phpcs:ignore WordPress.DB
+	}
+
+	/**
+	 * Persist one transcript atomically as a closed historical conversation.
+	 *
+	 * @param array  $messages  Normalized messages.
+	 * @param string $filename  Source filename.
+	 * @param string $source_id Stable content digest.
+	 * @param array  $contact   Optional visitor identity from the transcript.
+	 * @return int
+	 */
+	public static function create_imported_transcript( $messages, $filename, $source_id, $contact = array() ) {
+		global $wpdb;
+		$wpdb->query( $wpdb->prepare( 'START TRANSACTION /* %d */', 1 ) ); // phpcs:ignore WordPress.DB
+		$visitor    = self::find_imported_visitor( isset( $contact['email'] ) ? $contact['email'] : '', isset( $contact['tidio_id'] ) ? $contact['tidio_id'] : '' );
+		$visitor_id = $visitor ? (int) $visitor->id : self::create_imported_visitor(
+			array_merge( array( 'name' => __( 'Imported Tidio visitor', 'abibitumi-chat' ) ), $contact )
+		);
+		if ( ! $visitor_id ) {
+			$wpdb->query( $wpdb->prepare( 'ROLLBACK /* %d */', 1 ) ); // phpcs:ignore WordPress.DB
+			return 0;
+		}
+		$first   = reset( $messages );
+		$last    = end( $messages );
+		$created = $first['created_at'];
+		$updated = $last['created_at'];
+		$ok = $wpdb->insert(
+			self::table( 'conversations' ),
+			array(
+				'visitor_id'      => $visitor_id,
+				'operator_id'     => null,
+				'department'      => 'general',
+				'status'          => 'closed',
+				'subject'         => 'Tidio import [' . $source_id . ']',
+				'source'          => 'tidio',
+				'rating'          => null,
+				'rating_comment'  => sanitize_text_field( $filename ),
+				'created_at'      => $created,
+				'updated_at'      => $updated,
+				'last_message_at' => $updated,
+			)
+		); // phpcs:ignore WordPress.DB
+		if ( ! $ok ) {
+			$wpdb->query( $wpdb->prepare( 'ROLLBACK /* %d */', 1 ) ); // phpcs:ignore WordPress.DB
+			return 0;
+		}
+		$conversation_id = (int) $wpdb->insert_id;
+		foreach ( $messages as $message ) {
+			$ok = $wpdb->insert(
+				self::table( 'messages' ),
+				array(
+					'conversation_id' => $conversation_id,
+					'sender_type'     => $message['sender_type'],
+					'sender_id'       => 0,
+					'sender_name'     => $message['sender_name'],
+					'body'            => $message['body'],
+					'type'            => 'text',
+					'attachment_url'  => '',
+					'attachment_name' => '',
+					'meta'            => wp_json_encode( array( 'imported_from' => 'tidio' ) ),
+					'read_at'         => $message['created_at'],
+					'created_at'      => $message['created_at'],
+				)
+			); // phpcs:ignore WordPress.DB
+			if ( ! $ok ) {
+				$wpdb->query( $wpdb->prepare( 'ROLLBACK /* %d */', 1 ) ); // phpcs:ignore WordPress.DB
+				return 0;
+			}
+		}
+		$wpdb->query( $wpdb->prepare( 'COMMIT /* %d */', 1 ) ); // phpcs:ignore WordPress.DB
+		return $conversation_id;
+	}
+
 	/**
 	 * Fetch visitor, conversation, and message records for a privacy request.
 	 *
@@ -121,6 +338,7 @@ class ABChat_DB {
 		$out      = array();
 
 		foreach ( (array) $rows as $visitor ) {
+			$visitor->page_views    = self::recent_page_views( $visitor->id, 100 );
 			$visitor->conversations = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$convos} WHERE visitor_id = %d ORDER BY id ASC", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
 			foreach ( (array) $visitor->conversations as $conversation ) {
 				$conversation->messages = self::get_messages( $conversation->id );
@@ -141,10 +359,12 @@ class ABChat_DB {
 		$visitors = self::table( 'visitors' );
 		$convos   = self::table( 'conversations' );
 		$messages = self::table( 'messages' );
+		$views    = self::table( 'page_views' );
 		$rows     = $wpdb->get_results( $wpdb->prepare( "SELECT id FROM {$visitors} WHERE email = %s", $email ) ); // phpcs:ignore WordPress.DB
 		$attachments = array();
 
 		foreach ( (array) $rows as $visitor ) {
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$views} WHERE visitor_id = %d", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
 			$conversation_ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$convos} WHERE visitor_id = %d", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
 			foreach ( (array) $conversation_ids as $conversation_id ) {
 				$urls        = $wpdb->get_col( $wpdb->prepare( "SELECT attachment_url FROM {$messages} WHERE conversation_id = %d AND attachment_url <> %s", (int) $conversation_id, '' ) ); // phpcs:ignore WordPress.DB
@@ -169,6 +389,7 @@ class ABChat_DB {
 		$visitors = self::table( 'visitors' );
 		$convos   = self::table( 'conversations' );
 		$messages = self::table( 'messages' );
+		$views    = self::table( 'page_views' );
 		$limit    = max( 1, min( 1000, (int) $limit ) );
 		$ids      = $wpdb->get_col(
 			$wpdb->prepare(
@@ -180,6 +401,7 @@ class ABChat_DB {
 		); // phpcs:ignore WordPress.DB
 
 		$result = array( 'conversations' => 0, 'messages' => 0, 'visitors' => 0, 'attachments' => array() );
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$views} WHERE viewed_at < %s", $cutoff ) ); // phpcs:ignore WordPress.DB
 		if ( $ids ) {
 			$ids          = array_map( 'intval', $ids );
 			$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
@@ -197,6 +419,15 @@ class ABChat_DB {
 			); // phpcs:ignore WordPress.DB
 		}
 
+		$orphan_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT id FROM {$visitors} WHERE last_seen < %s AND NOT EXISTS (SELECT 1 FROM {$convos} WHERE {$convos}.visitor_id = {$visitors}.id)",
+				$cutoff
+			)
+		); // phpcs:ignore WordPress.DB
+		foreach ( (array) $orphan_ids as $orphan_id ) {
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$views} WHERE visitor_id = %d", (int) $orphan_id ) ); // phpcs:ignore WordPress.DB
+		}
 		$result['visitors'] = (int) $wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM {$visitors} WHERE last_seen < %s AND NOT EXISTS (SELECT 1 FROM {$convos} WHERE {$convos}.visitor_id = {$visitors}.id)",

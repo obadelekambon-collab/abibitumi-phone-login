@@ -13,6 +13,7 @@
 	if ( ! A ) { return; }
 
 	var current = 0;       // open conversation id
+	var currentMeta = {};
 	var lastId  = 0;       // last message id in current convo
 	var filter  = 'open';
 	var mine    = false;
@@ -130,6 +131,7 @@
 
 	function renderConversation( res ) {
 		var c = res.conversation, v = res.visitor || {};
+		currentMeta = c;
 		var head = $( '#abchat-convo-head' );
 		head.innerHTML =
 			'<div class="abchat-convo-title">' +
@@ -191,6 +193,13 @@
 		} );
 		html += '</dl>';
 		if ( v.userAgent ) { html += '<div class="abchat-vi-ua">' + esc( v.userAgent ) + '</div>'; }
+		if ( v.journey && v.journey.length ) {
+			html += '<h4>Recent journey</h4><ol class="abchat-journey">';
+			v.journey.forEach( function ( view ) {
+				html += '<li><a href="' + esc( view.url ) + '" target="_blank" rel="noopener noreferrer">' + esc( view.title || view.url ) + '</a><small>' + esc( view.viewedAt || '' ) + '</small></li>';
+			} );
+			html += '</ol>';
+		}
 		panel.innerHTML = html;
 	}
 
@@ -246,6 +255,7 @@
 				if ( 'visitor' === m.senderType ) { onIncoming( m ); }
 			} );
 			showTyping( res.visitorTyping );
+			if ( res.visitor ) { renderVisitorPanel( res.visitor, currentMeta ); }
 			renderCounts( res.counts || {} );
 		} );
 	}
@@ -350,6 +360,7 @@
 				if ( 'visitor' === m.senderType ) { onIncoming( m ); }
 			} );
 			showTyping( res.visitorTyping );
+			if ( res.visitor ) { renderVisitorPanel( res.visitor, currentMeta ); }
 			renderCounts( res.counts || {} );
 		} );
 		stream.addEventListener( 'reconnect', function () {

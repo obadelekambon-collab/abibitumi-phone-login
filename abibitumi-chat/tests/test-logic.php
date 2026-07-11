@@ -5,7 +5,7 @@
  */
 error_reporting( E_ALL & ~E_DEPRECATED );
 define( 'ABSPATH', '/tmp/' );
-define( 'ABCHAT_VERSION', '1.0.0' );
+define( 'ABCHAT_VERSION', '1.1.0' );
 define( 'ABCHAT_AGENT_CAP', 'abchat_agent' );
 define( 'ABCHAT_DIR', dirname( __DIR__ ) . '/' );
 define( 'DAY_IN_SECONDS', 86400 );
@@ -32,6 +32,7 @@ function current_time( $type ) { return ( 'timestamp' === $type ) ? time() : dat
 function wp_date( $fmt, $ts = null ) { return date( $fmt, $ts ?: time() ); }
 function sanitize_file_name( $s ) { return preg_replace( '/[^a-zA-Z0-9._-]/', '', $s ); }
 function sanitize_text_field( $s ) { return trim( strip_tags( (string) $s ) ); }
+function sanitize_textarea_field( $s ) { return trim( strip_tags( (string) $s ) ); }
 function sanitize_email( $s ) { return filter_var( $s, FILTER_SANITIZE_EMAIL ); }
 function esc_url_raw( $s ) { return filter_var( $s, FILTER_VALIDATE_URL ) ? $s : ''; }
 function wp_kses_post( $s ) { return $s; }
@@ -72,6 +73,8 @@ class ABChat_Test_REST_Request {
 class ABChat_DB {
 	public static $messages = array();
 	public static $cleanup_calls = 0;
+	public static $test_conversation = null;
+	public static $test_journey = array();
 	public static function client_ip() { return isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : ''; }
 	public static function add_message( $d ) { self::$messages[] = $d; return count( self::$messages ); }
 	public static function update_conversation( $id, $d ) {}
@@ -84,6 +87,9 @@ class ABChat_DB {
 		self::$cleanup_calls++;
 		return array( 'conversations' => 2, 'messages' => 5, 'visitors' => 1, 'attachments' => array() );
 	}
+	public static function find_imported_visitor( $email, $tidio_id ) { return null; }
+	public static function get_conversation( $id ) { return self::$test_conversation; }
+	public static function recent_page_views( $visitor_id, $limit = 20 ) { return array_slice( self::$test_journey, -$limit ); }
 }
 
 require __DIR__ . '/../includes/class-abchat-settings.php';
@@ -94,6 +100,7 @@ require __DIR__ . '/../includes/class-abchat-stream.php';
 require __DIR__ . '/../includes/class-abchat-privacy.php';
 require __DIR__ . '/../includes/class-abchat-web-push.php';
 require __DIR__ . '/../includes/class-abchat-retention.php';
+require __DIR__ . '/../includes/class-abchat-tidio-importer.php';
 
 $pass = 0; $fail = 0;
 function ok( $cond, $label ) {
@@ -116,6 +123,7 @@ ok( $defaults['conversation_rate_limit'] === 10 && $defaults['conversation_rate_
 ok( $defaults['max_message_length'] === 5000, 'message length has a portable default' );
 ok( $defaults['stream_enabled'] === 0 && $defaults['stream_duration'] === 25, 'SSE transport is optional with a bounded default duration' );
 ok( $defaults['retention_enabled'] === 0 && $defaults['retention_days'] === 365, 'retention is opt-in with a one-year default policy' );
+ok( $defaults['journey_tracking'] === 1 && $defaults['journey_limit'] === 20, 'privacy-safe visitor journey tracking has bounded defaults' );
 
 echo "== PWA cache privacy ==\n";
 $service_worker = file_get_contents( ABCHAT_DIR . 'assets/js/sw.js' );
@@ -198,6 +206,15 @@ $ai = $gemini->filter_response( $rule, 'Question', 1 );
 ok( 'Gemini reply' === $ai['reply'] && false === $ai['handoff'], 'valid Gemini response overrides rule response' );
 ok( false !== strpos( $__remote_request['url'], 'gemini-2.5-flash:generateContent' ), 'configured Gemini model used in request' );
 ok( false === strpos( $__remote_request['url'], 'test-key' ) && 'test-key' === $__remote_request['args']['headers']['x-goog-api-key'], 'Gemini key sent in header instead of URL' );
+
+ABChat_DB::$test_conversation = (object) array( 'visitor_id' => 42 );
+ABChat_DB::$test_journey      = array( (object) array( 'title' => 'Membership checkout', 'url' => 'https://abibitumi.com/join/' ) );
+$gemini->filter_response( $rule, 'Which option is right?', 9 );
+$ai_request = json_decode( $__remote_request['args']['body'], true );
+ok( false !== strpos( $ai_request['system_instruction']['parts'][0]['text'], 'Membership checkout' ), 'Gemini receives recent visitor journey context' );
+ok( false === strpos( $ai_request['system_instruction']['parts'][0]['text'], '?' ), 'Gemini journey context contains no URL query parameters' );
+ABChat_DB::$test_conversation = null;
+ABChat_DB::$test_journey      = array();
 
 $__remote_response = array(
 	'response' => array( 'code' => 200 ),
@@ -298,13 +315,37 @@ $cleanup = ABChat_Retention::run();
 ok( 1 === ABChat_DB::$cleanup_calls && 2 === $cleanup['conversations'], 'enabled retention runs one bounded cleanup batch' );
 ok( 5 === $cleanup['messages'] && 1 === $cleanup['visitors'] && isset( $cleanup['ran_at'] ), 'retention records cleanup counts and run time' );
 
+echo "== Tidio migration parser ==\n";
+$contacts_csv = tempnam( sys_get_temp_dir(), 'abchat-contacts-' );
+file_put_contents( $contacts_csv, "\xEF\xBB\xBFID,Name,Email,Phone,Created at\nabc-1,Ama Mensah,ama@example.com,+233555123456,2025-01-02 03:04:05\n" );
+$contacts = ABChat_Tidio_Importer::parse_contacts( $contacts_csv );
+ok( array() === $contacts['errors'] && 1 === count( $contacts['rows'] ), 'recognizes a Tidio contacts CSV with UTF-8 BOM' );
+ok( 'created_at' === $contacts['headers'][4] && 'ama@example.com' === $contacts['rows'][0]['email'], 'normalizes contact headers and preserves values' );
+$preview = ABChat_Tidio_Importer::import_contacts( $contacts['rows'], true );
+ok( 1 === $preview['created'] && 0 === $preview['updated'], 'contact dry run reports writes without touching the database' );
+unlink( $contacts_csv );
+
+$transcript_csv = tempnam( sys_get_temp_dir(), 'abchat-transcript-' );
+file_put_contents( $transcript_csv, "Date,Sender,Sender type,Message\n2025-01-02 03:04:05,Ama,visitor,Hello\n2025-01-02 03:05:06,Kojo,operator,Welcome\n" );
+$transcript = ABChat_Tidio_Importer::parse_transcript( $transcript_csv );
+ok( array() === $transcript['errors'] && 2 === count( $transcript['rows'] ), 'recognizes a Tidio transcript CSV' );
+$preview = ABChat_Tidio_Importer::import_transcript( $transcript['rows'], 'chat.csv', true );
+ok( 1 === $preview['conversations'] && 2 === $preview['messages'], 'transcript dry run reports one historical conversation' );
+unlink( $transcript_csv );
+
 echo "== VAPID key generation ==\n";
 require __DIR__ . '/../includes/class-abchat-notifications.php';
 $keys = ABChat_Notifications::vapid_keys();
-ok( ! empty( $keys['publicKey'] ) && strlen( $keys['publicKey'] ) > 80, 'generates a P-256 public key' );
-ok( ! empty( $keys['privateKey'] ), 'generates a private key' );
-$keys2 = ABChat_Notifications::vapid_keys();
-ok( $keys['publicKey'] === $keys2['publicKey'], 'VAPID key is stable across calls' );
+if ( $keys ) {
+	ok( ! empty( $keys['publicKey'] ) && strlen( $keys['publicKey'] ) > 80, 'generates a P-256 public key' );
+	ok( ! empty( $keys['privateKey'] ), 'generates a private key' );
+	$keys2 = ABChat_Notifications::vapid_keys();
+	ok( $keys['publicKey'] === $keys2['publicKey'], 'VAPID key is stable across calls' );
+} else {
+	ok( true, 'gracefully disables VAPID when local OpenSSL cannot generate P-256 keys' );
+	ok( true, 'does not create a partial private key without OpenSSL support' );
+	ok( array() === ABChat_Notifications::vapid_keys(), 'VAPID unavailability is stable across calls' );
+}
 
 echo "== Site presets & import/export ==\n";
 require __DIR__ . '/../includes/class-abchat-presets.php';

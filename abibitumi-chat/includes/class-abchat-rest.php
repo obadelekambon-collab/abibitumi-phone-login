@@ -79,6 +79,11 @@ class ABChat_REST {
 			'callback'            => array( $this, 'upload' ),
 			'permission_callback' => array( $this, 'upload_permission' ),
 		) );
+		register_rest_route( self::NS, '/page-view', array(
+			'methods'             => 'POST',
+			'callback'            => array( $this, 'page_view' ),
+			'permission_callback' => $visitor,
+		) );
 
 		// ---- Agent ------------------------------------------------------ //
 		register_rest_route( self::NS, '/agent/conversations', array(
@@ -266,7 +271,7 @@ class ABChat_REST {
 
 		$token = $this->token_from( $req );
 		$data  = array(
-			'page_url' => $req->get_param( 'page_url' ),
+			'page_url' => ABChat_DB::journey_url( $req->get_param( 'page_url' ) ),
 			'referrer' => $req->get_param( 'referrer' ),
 		);
 
@@ -284,6 +289,9 @@ class ABChat_REST {
 			}
 			$token   = wp_generate_password( 40, false, false );
 			$visitor = ABChat_DB::get_or_create_visitor( $token, $data );
+		}
+		if ( ! empty( $data['page_url'] ) ) {
+			ABChat_DB::record_page_view( $visitor->id, $data['page_url'], $req->get_param( 'page_title' ) );
 		}
 
 		$response = new WP_REST_Response(
@@ -324,6 +332,17 @@ class ABChat_REST {
 			$parts[] = 'Secure';
 		}
 		return implode( '; ', $parts );
+	}
+
+	/** Store the visitor's current same-site page without URL parameters. */
+	public function page_view( $req ) {
+		$visitor = $req->get_param( '_visitor' );
+		$limited = $this->consume_rate_limit( 'abchat_journey_v_' . (int) $visitor->id, 60, 60, 'abchat_journey_rate_limited' );
+		if ( is_wp_error( $limited ) ) {
+			return $limited;
+		}
+		$stored  = ABChat_DB::record_page_view( $visitor->id, $req->get_param( 'url' ), $req->get_param( 'title' ) );
+		return new WP_REST_Response( array( 'stored' => $stored ), 200 );
 	}
 
 	/**
@@ -884,6 +903,7 @@ class ABChat_REST {
 		return new WP_REST_Response(
 			array(
 				'messages'      => $this->shape_messages( ABChat_DB::get_messages( $convo->id, $after ) ),
+				'visitor'       => $this->shape_visitor( ABChat_DB::get_visitor( $convo->visitor_id ) ),
 				'visitorTyping' => ABChat_DB::is_typing( $convo->id, 'visitor' ),
 				'status'        => $convo->status,
 				'counts'        => ABChat_DB::conversation_counts(),
@@ -1197,9 +1217,17 @@ class ABChat_REST {
 	 * @param object $v Visitor row.
 	 * @return array
 	 */
-	protected function shape_visitor( $v ) {
+	public function shape_visitor( $v ) {
 		if ( ! $v ) {
 			return array();
+		}
+		$journey = array();
+		foreach ( ABChat_DB::recent_page_views( $v->id, ABChat_Settings::get( 'journey_limit', 20 ) ) as $view ) {
+			$journey[] = array(
+				'url'      => $view->url,
+				'title'    => $view->title,
+				'viewedAt' => $view->viewed_at,
+			);
 		}
 		return array(
 			'id'        => (int) $v->id,
@@ -1209,6 +1237,7 @@ class ABChat_REST {
 			'ip'        => $v->ip,
 			'page'      => $v->page_url,
 			'referrer'  => $v->referrer,
+			'journey'   => $journey,
 			'online'    => (bool) $v->is_online,
 			'wpUserId'  => (int) $v->wp_user_id,
 			'firstSeen' => $v->first_seen,
