@@ -30,11 +30,11 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 	public function test_rest_routes_are_registered() {
 		do_action( 'rest_api_init' );
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/abibitumi-chat/v1/session', $routes );
-		$this->assertArrayHasKey( '/abibitumi-chat/v1/bot', $routes );
-		$this->assertArrayHasKey( '/abibitumi-chat/v1/stream', $routes );
-		$this->assertArrayHasKey( '/abibitumi-chat/v1/agent/conversations', $routes );
-		$this->assertArrayHasKey( '/abibitumi-chat/v1/agent/stream', $routes );
+		$this->assertArrayHasKey( '/abchat/v1/session', $routes );
+		$this->assertArrayHasKey( '/abchat/v1/bot', $routes );
+		$this->assertArrayHasKey( '/abchat/v1/stream', $routes );
+		$this->assertArrayHasKey( '/abchat/v1/agent/conversations', $routes );
+		$this->assertArrayHasKey( '/abchat/v1/agent/stream', $routes );
 	}
 
 	/**

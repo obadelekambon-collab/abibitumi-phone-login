@@ -11,8 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class ABChat_Stream {
 
-	const VISITOR_ROUTE = '/abibitumi-chat/v1/stream';
-	const AGENT_ROUTE   = '/abibitumi-chat/v1/agent/stream';
+	const VISITOR_ROUTE = '/abchat/v1/stream';
+	const AGENT_ROUTE   = '/abchat/v1/agent/stream';
 
 	/**
 	 * Register routes and intercept their REST output for streaming.
