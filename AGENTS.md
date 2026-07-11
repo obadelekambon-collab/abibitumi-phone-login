@@ -36,6 +36,9 @@ All three must pass before committing. The test harness stubs the minimal
 WordPress functions, so it runs anywhere PHP is installed — no database, no
 web server.
 
+The same checks run in GitHub Actions on PHP 7.4 and 8.3 plus Node 20 via
+`.github/workflows/abibitumi-chat-ci.yml`.
+
 ## Conventions
 
 - **PHP:** WordPress coding standards — tabs for indentation, `snake_case`

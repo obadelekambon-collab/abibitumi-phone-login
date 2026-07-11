@@ -1,0 +1,58 @@
+name: Abibitumi Chat CI
+
+on:
+  pull_request:
+    paths:
+      - 'abibitumi-chat/**'
+      - '.github/workflows/abibitumi-chat-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'abibitumi-chat/**'
+      - '.github/workflows/abibitumi-chat-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - '7.4'
+          - '8.3'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: openssl
+          coverage: none
+
+      - name: Lint PHP
+        run: find abibitumi-chat -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Run logic tests
+        run: php abibitumi-chat/tests/test-logic.php
+
+  javascript:
+    name: JavaScript syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check JavaScript syntax
+        run: for f in abibitumi-chat/assets/js/*.js; do node --check "$f"; done
