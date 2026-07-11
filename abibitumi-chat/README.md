@@ -199,6 +199,21 @@ Import is schema-whitelisted (only known settings keys are accepted) and
 underscore-prefixed meta keys are stripped, so config files stay safe to pass
 between installs.
 
+## Migrating from Tidio
+
+Open **Chat → Tidio Migration** to import Tidio CSV exports. The importer has a
+validation-only mode enabled by default and accepts:
+
+- a Tidio contacts CSV (contacts are matched by email or Tidio ID); and
+- one or more Tidio conversation transcript CSV files.
+
+Imported transcripts are stored as closed historical conversations, never
+send live-chat notifications, and are deduplicated by a content digest. Run a
+validation pass first, back up the database, and rehearse the migration on
+staging. Tidio's transcript export does not include channel connections,
+operators, chatbot/Flow definitions, or attachment files, so those items must
+be configured or migrated separately.
+
 ## Verification
 `php test-logic.php` (see the scratchpad harness) exercises the settings
 defaults, office-hours window, chatbot keyword matching / hand-off, and VAPID

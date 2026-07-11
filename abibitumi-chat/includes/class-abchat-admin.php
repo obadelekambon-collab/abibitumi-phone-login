@@ -23,6 +23,7 @@ class ABChat_Admin {
 		add_action( 'admin_post_abchat_apply_preset', array( $this, 'apply_preset' ) );
 		add_action( 'admin_post_abchat_export_settings', array( $this, 'export_settings' ) );
 		add_action( 'admin_post_abchat_import_settings', array( $this, 'import_settings' ) );
+		add_action( 'admin_post_abchat_import_tidio', array( $this, 'import_tidio' ) );
 		add_action( 'admin_post_abchat_export_conversation', array( $this, 'export_conversation' ) );
 		add_action( 'admin_post_abchat_run_cleanup', array( $this, 'run_cleanup' ) );
 		add_action( 'admin_bar_menu', array( $this, 'admin_bar' ), 100 );
@@ -46,6 +47,15 @@ class ABChat_Admin {
 			array( $this, 'render_dashboard' ),
 			'dashicons-format-chat',
 			3
+		);
+
+		add_submenu_page(
+			'abchat',
+			__( 'Tidio Migration', 'abibitumi-chat' ),
+			__( 'Tidio Migration', 'abibitumi-chat' ),
+			'abchat_manage',
+			'abchat-tidio-migration',
+			array( $this, 'render_tidio_migration' )
 		);
 
 		add_submenu_page(
@@ -387,6 +397,76 @@ class ABChat_Admin {
 		$args[ $ok ? 'imported' : 'error' ] = $ok ? '1' : 'import';
 		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
+	}
+
+	/** Render the Tidio migration tool. */
+	public function render_tidio_migration() {
+		if ( ! current_user_can( 'abchat_manage' ) ) {
+			wp_die( esc_html__( 'You do not have permission to migrate chat data.', 'abibitumi-chat' ) );
+		}
+		$report = get_transient( 'abchat_tidio_report_' . get_current_user_id() );
+		delete_transient( 'abchat_tidio_report_' . get_current_user_id() );
+		include ABCHAT_DIR . 'templates/tidio-migration.php';
+	}
+
+	/** Validate and import uploaded Tidio CSV files. */
+	public function import_tidio() {
+		if ( ! current_user_can( 'abchat_manage' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'abibitumi-chat' ) );
+		}
+		check_admin_referer( 'abchat_import_tidio' );
+		$type    = isset( $_POST['import_type'] ) ? sanitize_key( wp_unslash( $_POST['import_type'] ) ) : '';
+		$dry_run = ! empty( $_POST['dry_run'] );
+		$report  = array( 'type' => $type, 'dry_run' => $dry_run, 'files' => array(), 'errors' => array() );
+		$files   = $this->normalized_uploads( isset( $_FILES['tidio_files'] ) ? $_FILES['tidio_files'] : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+
+		if ( ! in_array( $type, array( 'contacts', 'transcripts' ), true ) ) {
+			$report['errors'][] = __( 'Choose contacts or transcripts.', 'abibitumi-chat' );
+		}
+		foreach ( $files as $file ) {
+			$name = sanitize_file_name( $file['name'] );
+			if ( UPLOAD_ERR_OK !== (int) $file['error'] || ! is_uploaded_file( $file['tmp_name'] ) ) {
+				$report['errors'][] = sprintf( __( '%s was not uploaded successfully.', 'abibitumi-chat' ), $name );
+				continue;
+			}
+			if ( $file['size'] > ABChat_Tidio_Importer::MAX_FILE_SIZE || 'csv' !== strtolower( pathinfo( $name, PATHINFO_EXTENSION ) ) ) {
+				$report['errors'][] = sprintf( __( '%s must be a CSV no larger than 20 MB.', 'abibitumi-chat' ), $name );
+				continue;
+			}
+			$parsed = ( 'contacts' === $type ) ? ABChat_Tidio_Importer::parse_contacts( $file['tmp_name'] ) : ABChat_Tidio_Importer::parse_transcript( $file['tmp_name'] );
+			if ( $parsed['errors'] ) {
+				$report['errors'] = array_merge( $report['errors'], $parsed['errors'] );
+				continue;
+			}
+			$result = ( 'contacts' === $type ) ? ABChat_Tidio_Importer::import_contacts( $parsed['rows'], $dry_run ) : ABChat_Tidio_Importer::import_transcript( $parsed['rows'], $name, $dry_run );
+			$report['files'][] = array( 'name' => $name, 'result' => $result );
+		}
+		if ( ! $files ) {
+			$report['errors'][] = __( 'Select at least one CSV file.', 'abibitumi-chat' );
+		}
+		set_transient( 'abchat_tidio_report_' . get_current_user_id(), $report, 300 );
+		wp_safe_redirect( add_query_arg( array( 'page' => 'abchat-tidio-migration' ), admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/** Normalize PHP's single/multiple upload structures. */
+	private function normalized_uploads( $files ) {
+		if ( empty( $files['name'] ) ) {
+			return array();
+		}
+		if ( ! is_array( $files['name'] ) ) {
+			return array( $files );
+		}
+		$out = array();
+		foreach ( $files['name'] as $index => $name ) {
+			$out[] = array(
+				'name'     => $name,
+				'tmp_name' => $files['tmp_name'][ $index ],
+				'error'    => $files['error'][ $index ],
+				'size'     => $files['size'][ $index ],
+			);
+		}
+		return $out;
 	}
 
 	/**

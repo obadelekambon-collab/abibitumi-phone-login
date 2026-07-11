@@ -79,6 +79,33 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 'Hello from WordPress.', $messages[0]->body );
 	}
 
+	/** Tidio migration persists closed history and deduplicates contacts/transcripts. */
+	public function test_tidio_historical_import_round_trip() {
+		$contacts = array( array( 'id' => 'tidio-contact-1', 'name' => 'Ama Mensah', 'email' => 'ama-import@example.com', 'phone' => '+233555123456' ) );
+		$first    = ABChat_Tidio_Importer::import_contacts( $contacts );
+		$second   = ABChat_Tidio_Importer::import_contacts( $contacts );
+		$this->assertSame( 1, $first['created'] );
+		$this->assertSame( 1, $second['updated'] );
+
+		$rows = array(
+			array( 'date' => '2025-01-02 03:04:05', 'sender' => 'Ama', 'sender_type' => 'visitor', 'message' => 'Hello', 'visitor_email' => 'ama-import@example.com' ),
+			array( 'date' => '2025-01-02 03:05:06', 'sender' => 'Agent', 'sender_type' => 'operator', 'message' => 'Welcome' ),
+		);
+		$first  = ABChat_Tidio_Importer::import_transcript( $rows, 'conversation.csv' );
+		$second = ABChat_Tidio_Importer::import_transcript( $rows, 'conversation.csv' );
+		$this->assertSame( 1, $first['conversations'] );
+		$this->assertSame( 2, $first['messages'] );
+		$this->assertSame( 0, $second['conversations'] );
+		$this->assertSame( 2, $second['skipped'] );
+		$digest = hash( 'sha256', wp_json_encode( array(
+			array( 'body' => 'Hello', 'sender_name' => 'Ama', 'sender_type' => 'visitor', 'created_at' => '2025-01-02 03:04:05' ),
+			array( 'body' => 'Welcome', 'sender_name' => 'Agent', 'sender_type' => 'operator', 'created_at' => '2025-01-02 03:05:06' ),
+		) ) );
+		$conversation = ABChat_DB::get_conversation( ABChat_DB::import_source_exists( $digest ) );
+		$this->assertSame( 'closed', $conversation->status );
+		$this->assertSame( 'tidio', $conversation->source );
+	}
+
 	/**
 	 * Privacy integrations and retention scheduling are active.
 	 */
