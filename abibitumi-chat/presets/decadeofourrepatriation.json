@@ -1,0 +1,27 @@
+{
+	"_label": "Decade of Our Repatriation",
+	"_site": "decadeofourrepatriation.com",
+	"brand_name": "Decade of Our Repatriation",
+	"welcome_title": "Join the movement ✊🏿",
+	"welcome_subtitle": "Questions about the Decade of Our Repatriation? Ask about events, pledges and how to take part.",
+	"primary_color": "#1a7a3d",
+	"text_color": "#ffffff",
+	"pwa_short_name": "Repatriation",
+	"pwa_theme_color": "#1a7a3d",
+	"bot_name": "Sankofa Bot",
+	"bot_greeting": "Welcome! I can tell you about the Decade of Our Repatriation movement, upcoming events, and how to get involved — or connect you with an organiser.",
+	"bot_fallback": "Let me connect you with one of our organisers.",
+	"departments": [
+		{ "id": "general", "name": "General" },
+		{ "id": "events", "name": "Events" },
+		{ "id": "volunteer", "name": "Volunteer & Get Involved" },
+		{ "id": "media", "name": "Media & Partnerships" }
+	],
+	"bot_flows": [
+		{ "id": "about", "label": "About the movement", "keywords": ["about", "movement", "decade", "repatriation", "mission", "what is", "purpose"], "answer": "The Decade of Our Repatriation is a movement calling our people home over the coming decade. I can share the vision, milestones, or how you can take part." },
+		{ "id": "events", "label": "Events & gatherings", "keywords": ["event", "events", "conference", "gathering", "meeting", "calendar", "when", "date"], "answer": "We hold gatherings, conferences and online sessions throughout the year. Would you like the schedule or a link to register?" },
+		{ "id": "involved", "label": "Get involved", "keywords": ["involved", "volunteer", "join", "pledge", "participate", "help", "support", "donate"], "answer": "You can take the pledge, volunteer, or partner with us. Tell me how you'd like to contribute and I'll guide you." },
+		{ "id": "media", "label": "Media & partnerships", "keywords": ["media", "press", "interview", "partner", "partnership", "collaborate", "sponsor"], "answer": "For media requests and partnerships, I can connect you with the right person on our team." },
+		{ "id": "human", "label": "Talk to an organiser", "keywords": ["human", "agent", "person", "support", "help", "organiser", "organizer", "representative"], "answer": "__HANDOFF__" }
+	]
+}

@@ -1,0 +1,177 @@
+name: Abibitumi Chat CI
+
+on:
+  pull_request:
+    paths:
+      - 'abibitumi-chat/**'
+      - '.github/workflows/abibitumi-chat-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'abibitumi-chat/**'
+      - '.github/workflows/abibitumi-chat-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - '7.4'
+          - '8.3'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: openssl
+          coverage: none
+
+      - name: Lint PHP
+        run: find abibitumi-chat -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Validate Composer metadata
+        run: composer validate --working-dir=abibitumi-chat --strict
+
+      - name: Install backend dependencies
+        run: composer install --working-dir=abibitumi-chat --no-interaction --prefer-dist --no-progress --no-dev
+
+      - name: Audit backend dependencies
+        run: composer audit --working-dir=abibitumi-chat --no-interaction --abandoned=report
+
+      - name: Run logic tests
+        run: php abibitumi-chat/tests/test-logic.php
+
+  javascript:
+    name: JavaScript syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check JavaScript syntax
+        run: for f in abibitumi-chat/assets/js/*.js; do node --check "$f"; done
+
+      - name: Install browser test dependencies
+        run: npm ci --prefix abibitumi-chat/tests/browser
+
+      - name: Run Chromium UI smoke tests
+        run: npm test --prefix abibitumi-chat/tests/browser
+
+  wordpress:
+    name: WordPress ${{ matrix.wordpress }} / PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - wordpress: '5.8.10'
+            php: '7.4'
+          - wordpress: '6.9.4'
+            php: '7.4'
+          - wordpress: '6.9.4'
+            php: '8.3'
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl, json, mbstring, mysqli, openssl, xml
+          coverage: none
+
+      - name: Install test dependencies
+        run: composer install --working-dir=abibitumi-chat --no-interaction --prefer-dist --no-progress
+
+      - name: Install WordPress 5.8 test framework
+        if: matrix.wordpress == '5.8.10'
+        run: |
+          composer create-project wp-phpunit/wp-phpunit /tmp/wp-phpunit 5.8.10 --no-interaction --prefer-dist --no-progress
+          curl -fsSL https://phar.phpunit.de/phpunit-7.5.20.phar -o /tmp/phpunit-7.5.20.phar
+          echo '472b6e275e4479bab71f2f7744d2e22ace9566a4e3cef37952e4d9c07f6d3a92  /tmp/phpunit-7.5.20.phar' | sha256sum --check
+
+      - name: Install WordPress ${{ matrix.wordpress }}
+        run: |
+          curl -fsSL https://wordpress.org/wordpress-${{ matrix.wordpress }}.zip -o /tmp/wordpress.zip
+          unzip -q /tmp/wordpress.zip -d /tmp
+
+      - name: Run modern WordPress integration tests
+        if: matrix.wordpress != '5.8.10'
+        run: composer test:integration --working-dir=abibitumi-chat
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+          WP_TEST_DB_HOST: 127.0.0.1
+          WP_TEST_DB_NAME: wordpress_test
+          WP_TEST_DB_PASSWORD: root
+          WP_TEST_DB_USER: root
+
+      - name: Run minimum WordPress integration tests
+        if: matrix.wordpress == '5.8.10'
+        run: php /tmp/phpunit-7.5.20.phar -c abibitumi-chat/tests/integration/phpunit.xml.dist
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+          WP_TESTS_FRAMEWORK_DIR: /tmp/wp-phpunit
+          WP_TEST_DB_HOST: 127.0.0.1
+          WP_TEST_DB_NAME: wordpress_test
+          WP_TEST_DB_PASSWORD: root
+          WP_TEST_DB_USER: root
+
+  package:
+    name: Installable plugin
+    needs:
+      - php
+      - javascript
+      - wordpress
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          extensions: curl, json, mbstring, openssl
+          coverage: none
+
+      - name: Install production dependencies
+        run: composer install --working-dir=abibitumi-chat --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
+
+      - name: Build plugin ZIP
+        run: zip -qr abibitumi-chat.zip abibitumi-chat -x 'abibitumi-chat/tests/*'
+
+      - name: Upload plugin ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: abibitumi-chat
+          path: abibitumi-chat.zip
+          if-no-files-found: error

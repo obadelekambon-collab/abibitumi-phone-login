@@ -29,3 +29,17 @@ v1.1.3
 - `main` — stable/released
 - `dev` — active development
 - `release/*` — release candidates
+
+---
+
+## Companion plugin: Abibitumi Chat (`/abibitumi-chat`)
+
+A self-hosted **Tidio replacement** for the platform — live chat, chatbots,
+ticketing, visitor tracking, canned responses, analytics, and an installable
+**PWA** for agents. Web-first, then PWA. No third-party SaaS.
+
+Built to be white-labelled across abibitumi.com, repatriatetoghana.com and
+decadeofourrepatriation.com (all branding/colours/copy are per-site settings).
+
+See [`abibitumi-chat/README.md`](abibitumi-chat/README.md) for features,
+architecture, installation and extension points.

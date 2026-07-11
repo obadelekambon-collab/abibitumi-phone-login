@@ -1,0 +1,27 @@
+{
+	"_label": "Repatriate to Ghana",
+	"_site": "repatriatetoghana.com",
+	"brand_name": "Repatriate to Ghana",
+	"welcome_title": "Akwaaba — welcome home! 🇬🇭",
+	"welcome_subtitle": "Planning your move to Ghana? Ask us about visas, the Right of Abode, housing and more.",
+	"primary_color": "#006b3f",
+	"text_color": "#ffffff",
+	"pwa_short_name": "Repatriate",
+	"pwa_theme_color": "#006b3f",
+	"bot_name": "Akwaaba Bot",
+	"bot_greeting": "Akwaaba! I can help with repatriation questions — visas, citizenship, housing, shipping — or connect you with our team.",
+	"bot_fallback": "Let me connect you with a repatriation advisor.",
+	"departments": [
+		{ "id": "general", "name": "General" },
+		{ "id": "immigration", "name": "Visas & Immigration" },
+		{ "id": "housing", "name": "Housing & Land" },
+		{ "id": "relocation", "name": "Relocation & Shipping" }
+	],
+	"bot_flows": [
+		{ "id": "process", "label": "How to repatriate", "keywords": ["repatriate", "repatriation", "move", "relocate", "start", "process", "steps"], "answer": "Repatriating to Ghana usually starts with choosing your visa or residency route, then housing and shipping. Tell me your situation and I'll point you to the right resources or an advisor." },
+		{ "id": "visa", "label": "Visas & Right of Abode", "keywords": ["visa", "abode", "right of abode", "citizenship", "passport", "residency", "diaspora"], "answer": "Options include a visa on arrival, residence permit, the Right of Abode, and citizenship for the diaspora. Which one would you like to know more about?" },
+		{ "id": "housing", "label": "Housing & land", "keywords": ["house", "housing", "land", "rent", "buy", "property", "accommodation"], "answer": "We can advise on renting, buying property, and acquiring land safely in Ghana. Would you like to speak with our housing team?" },
+		{ "id": "shipping", "label": "Shipping & relocation", "keywords": ["ship", "shipping", "container", "freight", "relocate", "move belongings", "customs"], "answer": "For shipping belongings and vehicles, we can explain container options, customs and timelines. Shall I connect you with relocation support?" },
+		{ "id": "human", "label": "Talk to an advisor", "keywords": ["human", "agent", "person", "support", "help", "advisor", "representative"], "answer": "__HANDOFF__" }
+	]
+}
