@@ -81,6 +81,7 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 
 	/** Tidio migration persists closed history and deduplicates contacts/transcripts. */
 	public function test_tidio_historical_import_round_trip() {
+		$this->assertSame( 64, strlen( ABChat_DB::tidio_token( 'tidio-contact-1' ) ) );
 		$contacts = array( array( 'id' => 'tidio-contact-1', 'name' => 'Ama Mensah', 'email' => 'ama-import@example.com', 'phone' => '+233555123456' ) );
 		$first    = ABChat_Tidio_Importer::import_contacts( $contacts );
 		$second   = ABChat_Tidio_Importer::import_contacts( $contacts );

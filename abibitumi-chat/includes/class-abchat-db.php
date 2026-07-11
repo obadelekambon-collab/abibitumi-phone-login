@@ -117,7 +117,7 @@ class ABChat_DB {
 	public static function find_imported_visitor( $email, $tidio_id ) {
 		global $wpdb;
 		$table = self::table( 'visitors' );
-		$token = $tidio_id ? 'tidio_' . hash( 'sha256', $tidio_id ) : '';
+		$token = $tidio_id ? self::tidio_token( $tidio_id ) : '';
 		if ( $email && $token ) {
 			return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE email = %s OR token = %s ORDER BY id ASC LIMIT 1", $email, $token ) ); // phpcs:ignore WordPress.DB
 		}
@@ -139,7 +139,7 @@ class ABChat_DB {
 	public static function create_imported_visitor( $data ) {
 		global $wpdb;
 		$tidio_id = isset( $data['tidio_id'] ) ? $data['tidio_id'] : '';
-		$token    = $tidio_id ? 'tidio_' . hash( 'sha256', $tidio_id ) : 'tidio_' . wp_generate_password( 40, false, false );
+		$token    = $tidio_id ? self::tidio_token( $tidio_id ) : 'tidio_' . wp_generate_password( 40, false, false );
 		$row      = array(
 			'token'      => $token,
 			'name'       => isset( $data['name'] ) ? sanitize_text_field( $data['name'] ) : '',
@@ -156,6 +156,11 @@ class ABChat_DB {
 		);
 		$ok = $wpdb->insert( self::table( 'visitors' ), $row ); // phpcs:ignore WordPress.DB
 		return $ok ? (int) $wpdb->insert_id : 0;
+	}
+
+	/** Build a stable Tidio visitor token that fits the 64-character column. */
+	public static function tidio_token( $tidio_id ) {
+		return 'tidio_' . substr( hash( 'sha256', (string) $tidio_id ), 0, 58 );
 	}
 
 	/** Update non-empty imported contact fields. */
