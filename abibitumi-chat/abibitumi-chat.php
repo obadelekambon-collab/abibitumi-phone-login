@@ -33,6 +33,7 @@ if ( ! defined( 'ABCHAT_AGENT_CAP' ) ) {
 
 require_once ABCHAT_DIR . 'includes/class-abchat-db.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-settings.php';
+require_once ABCHAT_DIR . 'includes/class-abchat-presets.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-activator.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-rest.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-chatbot.php';

@@ -7,6 +7,7 @@ error_reporting( E_ALL & ~E_DEPRECATED );
 define( 'ABSPATH', '/tmp/' );
 define( 'ABCHAT_VERSION', '1.0.0' );
 define( 'ABCHAT_AGENT_CAP', 'abchat_agent' );
+define( 'ABCHAT_DIR', dirname( __DIR__ ) . '/' );
 define( 'DAY_IN_SECONDS', 86400 );
 
 $__options = array();
@@ -20,9 +21,13 @@ function wp_parse_args( $args, $defaults ) { return array_merge( $defaults, is_a
 function apply_filters( $tag, $value ) { return $value; }
 function do_action() {}
 function wp_strip_all_tags( $s ) { return trim( strip_tags( $s ) ); }
-function wp_json_encode( $v ) { return json_encode( $v ); }
+function wp_json_encode( $v, $opts = 0 ) { return json_encode( $v, $opts ); }
 function current_time( $type ) { return ( 'timestamp' === $type ) ? time() : date( 'Y-m-d H:i:s' ); }
 function wp_date( $fmt, $ts = null ) { return date( $fmt, $ts ?: time() ); }
+function sanitize_file_name( $s ) { return preg_replace( '/[^a-zA-Z0-9._-]/', '', $s ); }
+function wp_kses_post( $s ) { return $s; }
+function wp_parse_url( $url, $c = -1 ) { return parse_url( $url, $c ); }
+function home_url( $p = '' ) { return 'https://abibitumi.com' . $p; }
 
 // Stub ABChat_DB so the chatbot's respond() can run without a database.
 class ABChat_DB {
@@ -96,6 +101,39 @@ ok( ! empty( $keys['publicKey'] ) && strlen( $keys['publicKey'] ) > 80, 'generat
 ok( ! empty( $keys['privateKey'] ), 'generates a private key' );
 $keys2 = ABChat_Notifications::vapid_keys();
 ok( $keys['publicKey'] === $keys2['publicKey'], 'VAPID key is stable across calls' );
+
+echo "== Site presets & import/export ==\n";
+require __DIR__ . '/../includes/class-abchat-presets.php';
+$avail = ABChat_Presets::available();
+ok( count( $avail ) === 3, 'three site presets are bundled' );
+ok( isset( $avail['repatriatetoghana'] ), 'repatriatetoghana preset present' );
+
+ABChat_Settings::update( ABChat_Settings::defaults() );
+ok( ABChat_Presets::apply( 'repatriatetoghana' ) === true, 'apply repatriatetoghana preset succeeds' );
+ok( ABChat_Settings::get( 'brand_name' ) === 'Repatriate to Ghana', 'brand name switched by preset' );
+ok( ABChat_Settings::get( 'primary_color' ) === '#006b3f', 'primary colour switched by preset' );
+$flows = ABChat_Settings::get( 'bot_flows' );
+$has_visa = false;
+foreach ( (array) $flows as $f ) { if ( 'visa' === $f['id'] ) { $has_visa = true; } }
+ok( $has_visa, 'repatriation bot flows loaded (visa flow present)' );
+
+ABChat_Settings::update( ABChat_Settings::defaults() );
+ok( ABChat_Presets::apply( 'decadeofourrepatriation' ) === true, 'apply decadeofourrepatriation preset succeeds' );
+ok( ABChat_Settings::get( 'bot_name' ) === 'Sankofa Bot', 'decade preset sets bot name' );
+
+ok( ABChat_Presets::apply( 'does-not-exist' ) === false, 'unknown preset returns false' );
+
+// Meta keys must never leak into settings.
+ABChat_Presets::apply( 'abibitumi' );
+ok( ABChat_Settings::get( '_label', 'MISSING' ) === 'MISSING', 'underscore meta keys stripped on import' );
+
+// Round-trip export → import.
+$json = ABChat_Presets::export();
+$decoded = json_decode( $json, true );
+ok( is_array( $decoded ) && isset( $decoded['brand_name'] ), 'export produces valid settings JSON' );
+ABChat_Settings::update( array( 'brand_name' => 'Changed' ) );
+ABChat_Presets::import( $decoded );
+ok( ABChat_Settings::get( 'brand_name' ) === 'Abibitumi', 'import restores exported brand name' );
 
 echo "\n== RESULT: $pass passed, $fail failed ==\n";
 exit( $fail ? 1 : 0 );

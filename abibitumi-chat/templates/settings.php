@@ -31,9 +31,56 @@ $checkbox = function ( $name, $val, $label ) {
 <div class="wrap">
 	<h1><?php esc_html_e( 'Abibitumi Chat — Settings', 'abibitumi-chat' ); ?></h1>
 
-	<?php if ( isset( $_GET['updated'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification ?>
+	<?php // phpcs:disable WordPress.Security.NonceVerification ?>
+	<?php if ( isset( $_GET['updated'] ) ) : ?>
 		<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Settings saved.', 'abibitumi-chat' ); ?></p></div>
 	<?php endif; ?>
+	<?php if ( isset( $_GET['preset'] ) ) : ?>
+		<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Site preset applied.', 'abibitumi-chat' ); ?></p></div>
+	<?php endif; ?>
+	<?php if ( isset( $_GET['imported'] ) ) : ?>
+		<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Settings imported.', 'abibitumi-chat' ); ?></p></div>
+	<?php endif; ?>
+	<?php if ( isset( $_GET['error'] ) ) : ?>
+		<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'That action could not be completed. Check the file or preset and try again.', 'abibitumi-chat' ); ?></p></div>
+	<?php endif; ?>
+	<?php // phpcs:enable WordPress.Security.NonceVerification ?>
+
+	<?php $presets = ABChat_Presets::available(); ?>
+	<div class="abchat-section">
+		<h2><?php esc_html_e( 'Site presets & portability', 'abibitumi-chat' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'Apply a ready-made branding + chatbot configuration for one of the network sites, or move settings between sites via export/import. The same plugin runs on every site — only these settings differ.', 'abibitumi-chat' ); ?></p>
+		<div style="display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start; margin-top:12px;">
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="abchat_apply_preset">
+				<?php wp_nonce_field( 'abchat_preset' ); ?>
+				<strong><?php esc_html_e( 'Apply a site preset', 'abibitumi-chat' ); ?></strong><br>
+				<select name="preset">
+					<?php foreach ( $presets as $slug => $label ) : ?>
+						<option value="<?php echo esc_attr( $slug ); ?>"><?php echo esc_html( $label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<button type="submit" class="button" onclick="return confirm('<?php echo esc_js( __( 'Apply this preset? It will overwrite the matching settings.', 'abibitumi-chat' ) ); ?>');"><?php esc_html_e( 'Apply preset', 'abibitumi-chat' ); ?></button>
+			</form>
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="abchat_export_settings">
+				<?php wp_nonce_field( 'abchat_export' ); ?>
+				<strong><?php esc_html_e( 'Export', 'abibitumi-chat' ); ?></strong><br>
+				<button type="submit" class="button"><?php esc_html_e( 'Download settings JSON', 'abibitumi-chat' ); ?></button>
+			</form>
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
+				<input type="hidden" name="action" value="abchat_import_settings">
+				<?php wp_nonce_field( 'abchat_import' ); ?>
+				<strong><?php esc_html_e( 'Import', 'abibitumi-chat' ); ?></strong><br>
+				<input type="file" name="import_file" accept="application/json,.json" required>
+				<button type="submit" class="button"><?php esc_html_e( 'Import', 'abibitumi-chat' ); ?></button>
+			</form>
+
+		</div>
+	</div>
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="abchat-settings-form">
 		<input type="hidden" name="action" value="abchat_save_settings">

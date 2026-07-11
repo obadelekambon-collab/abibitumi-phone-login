@@ -94,6 +94,38 @@ Every visible string, colour, avatar, bot flow and PWA name is a setting stored
 under a single option key, so the same code runs unchanged on each site with its
 own branding. Nothing is hard-coded to abibitumi.com.
 
+### Bundled site presets
+Ready-made configurations ship in `presets/` for each property:
+
+| Preset slug | Site |
+| --- | --- |
+| `abibitumi` | abibitumi.com |
+| `repatriatetoghana` | repatriatetoghana.com |
+| `decadeofourrepatriation` | decadeofourrepatriation.com |
+
+Each preset sets that site's brand name, welcome copy, colours, PWA name, bot
+name/greeting, departments and a tailored set of chatbot flows (e.g.
+repatriatetoghana has visa / Right of Abode / housing / shipping flows; the
+Decade site has movement / events / get-involved / media flows).
+
+### One-click deploy to each site
+Install the identical plugin on all three WordPress sites, then either:
+
+- **Admin:** *Chat → Settings → Site presets & portability* → pick the site →
+  **Apply preset**. Or **Export** settings from one site and **Import** on
+  another.
+- **WP-CLI:**
+  ```bash
+  wp abchat list-presets
+  wp abchat apply-preset repatriatetoghana
+  wp abchat export --file=chat-settings.json   # move config between sites
+  wp abchat import chat-settings.json
+  ```
+
+Import is schema-whitelisted (only known settings keys are accepted) and
+underscore-prefixed meta keys are stripped, so config files stay safe to pass
+between installs.
+
 ## Verification
 `php test-logic.php` (see the scratchpad harness) exercises the settings
 defaults, office-hours window, chatbot keyword matching / hand-off, and VAPID

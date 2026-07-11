@@ -1,0 +1,26 @@
+{
+	"_label": "Abibitumi.com",
+	"_site": "abibitumi.com",
+	"brand_name": "Abibitumi",
+	"welcome_title": "Akwaaba! 👋",
+	"welcome_subtitle": "Ask us anything about membership, courses or the community.",
+	"primary_color": "#0b7d3e",
+	"text_color": "#ffffff",
+	"pwa_short_name": "Abibitumi",
+	"pwa_theme_color": "#0b7d3e",
+	"bot_name": "Abena Bot",
+	"bot_greeting": "Welcome to Abibitumi! I can answer common questions or connect you with a person.",
+	"bot_fallback": "Let me connect you with a team member.",
+	"departments": [
+		{ "id": "general", "name": "General" },
+		{ "id": "membership", "name": "Membership" },
+		{ "id": "courses", "name": "Courses & Classes" },
+		{ "id": "tech", "name": "Tech Support" }
+	],
+	"bot_flows": [
+		{ "id": "membership", "label": "Membership & pricing", "keywords": ["price", "pricing", "cost", "membership", "subscribe", "plan", "join"], "answer": "You can view all membership options on our Join page. Would you like the link, or should I connect you with someone?" },
+		{ "id": "courses", "label": "Courses & classes", "keywords": ["course", "class", "twi", "language", "lesson", "learn", "akan"], "answer": "We offer live and self-paced classes in Twi and other African languages. Tell me which language or topic interests you." },
+		{ "id": "account", "label": "Account & login", "keywords": ["login", "password", "account", "sign in", "otp", "phone"], "answer": "For login or account issues, make sure you are using the phone number registered to your account. I can connect you with support if you are still stuck." },
+		{ "id": "human", "label": "Talk to a person", "keywords": ["human", "agent", "person", "support", "help", "representative"], "answer": "__HANDOFF__" }
+	]
+}

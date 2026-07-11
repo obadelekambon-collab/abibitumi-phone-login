@@ -20,6 +20,9 @@ class ABChat_Admin {
 		add_action( 'admin_menu', array( $this, 'menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 		add_action( 'admin_post_abchat_save_settings', array( $this, 'save_settings' ) );
+		add_action( 'admin_post_abchat_apply_preset', array( $this, 'apply_preset' ) );
+		add_action( 'admin_post_abchat_export_settings', array( $this, 'export_settings' ) );
+		add_action( 'admin_post_abchat_import_settings', array( $this, 'import_settings' ) );
 		add_action( 'admin_bar_menu', array( $this, 'admin_bar' ), 100 );
 	}
 
@@ -270,6 +273,66 @@ class ABChat_Admin {
 		ABChat_Settings::update( $values );
 
 		wp_safe_redirect( add_query_arg( array( 'page' => 'abchat-settings', 'updated' => '1' ), admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Apply a bundled site preset.
+	 *
+	 * @return void
+	 */
+	public function apply_preset() {
+		if ( ! current_user_can( 'abchat_manage' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'abibitumi-chat' ) );
+		}
+		check_admin_referer( 'abchat_preset' );
+		$slug = isset( $_POST['preset'] ) ? sanitize_file_name( wp_unslash( $_POST['preset'] ) ) : '';
+		$ok   = ABChat_Presets::apply( $slug );
+		$args = array( 'page' => 'abchat-settings' );
+		$args[ $ok ? 'preset' : 'error' ] = $ok ? '1' : 'preset';
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Stream the current settings as a JSON download.
+	 *
+	 * @return void
+	 */
+	public function export_settings() {
+		if ( ! current_user_can( 'abchat_manage' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'abibitumi-chat' ) );
+		}
+		check_admin_referer( 'abchat_export' );
+		$host = wp_parse_url( home_url(), PHP_URL_HOST );
+		$name = 'abibitumi-chat-' . sanitize_file_name( $host ? $host : 'settings' ) . '.json';
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . $name . '"' );
+		echo ABChat_Presets::export(); // phpcs:ignore WordPress.Security.EscapeOutput
+		exit;
+	}
+
+	/**
+	 * Import settings from an uploaded JSON file.
+	 *
+	 * @return void
+	 */
+	public function import_settings() {
+		if ( ! current_user_can( 'abchat_manage' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'abibitumi-chat' ) );
+		}
+		check_admin_referer( 'abchat_import' );
+
+		$ok = false;
+		if ( ! empty( $_FILES['import_file']['tmp_name'] ) && is_uploaded_file( $_FILES['import_file']['tmp_name'] ) ) {
+			$raw  = file_get_contents( $_FILES['import_file']['tmp_name'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions,WordPress.Security.ValidatedSanitizedInput
+			$data = json_decode( $raw, true );
+			$ok   = ABChat_Presets::import( $data );
+		}
+		$args = array( 'page' => 'abchat-settings' );
+		$args[ $ok ? 'imported' : 'error' ] = $ok ? '1' : 'import';
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
 	}
 }
