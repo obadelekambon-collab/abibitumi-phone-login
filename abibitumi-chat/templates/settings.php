@@ -270,6 +270,14 @@ $checkbox = function ( $name, $val, $label ) {
 					<th><label for="gemini_model"><?php esc_html_e( 'Gemini model', 'abibitumi-chat' ); ?></label></th>
 					<td><input name="gemini_model" id="gemini_model" type="text" class="regular-text" value="<?php echo esc_attr( $s['gemini_model'] ); ?>"></td>
 				</tr>
+				<tr>
+					<th><?php esc_html_e( 'Bot rate limit', 'abibitumi-chat' ); ?></th>
+					<td>
+						<label><input name="bot_rate_limit" type="number" min="1" value="<?php echo esc_attr( $s['bot_rate_limit'] ); ?>"> <?php esc_html_e( 'requests per visitor', 'abibitumi-chat' ); ?></label>
+						<label><input name="bot_rate_window" type="number" min="10" value="<?php echo esc_attr( $s['bot_rate_window'] ); ?>"> <?php esc_html_e( 'seconds', 'abibitumi-chat' ); ?></label>
+						<p class="description"><?php esc_html_e( 'The IP limit is three times the visitor limit to prevent new-session abuse.', 'abibitumi-chat' ); ?></p>
+					</td>
+				</tr>
 			</table>
 			<h4><?php esc_html_e( 'Flows (keyword → answer)', 'abibitumi-chat' ); ?></h4>
 			<p class="description"><?php esc_html_e( 'Comma-separated keywords. Use __HANDOFF__ as the answer to route the visitor to a human.', 'abibitumi-chat' ); ?></p>

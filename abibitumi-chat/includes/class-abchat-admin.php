@@ -215,6 +215,8 @@ class ABChat_Admin {
 			'bot_fallback'        => sanitize_textarea_field( isset( $in['bot_fallback'] ) ? $in['bot_fallback'] : '' ),
 			'bot_ai_enabled'      => $checkbox( 'bot_ai_enabled' ),
 			'gemini_model'        => preg_replace( '/[^a-zA-Z0-9._-]/', '', $text( 'gemini_model', 'gemini-2.5-flash' ) ),
+			'bot_rate_limit'      => max( 1, absint( isset( $in['bot_rate_limit'] ) ? $in['bot_rate_limit'] : 10 ) ),
+			'bot_rate_window'     => max( 10, absint( isset( $in['bot_rate_window'] ) ? $in['bot_rate_window'] : 60 ) ),
 			'notify_email'        => sanitize_email( isset( $in['notify_email'] ) ? $in['notify_email'] : '' ),
 			'notify_new_chat'     => $checkbox( 'notify_new_chat' ),
 			'notify_offline'      => $checkbox( 'notify_offline' ),

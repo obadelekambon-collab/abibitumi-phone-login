@@ -491,9 +491,68 @@ class ABChat_REST {
 		if ( is_wp_error( $convo ) ) {
 			return $convo;
 		}
+		$limited = $this->check_bot_rate_limit( $visitor );
+		if ( is_wp_error( $limited ) ) {
+			return $limited;
+		}
 		$bot    = new ABChat_Chatbot();
 		$result = $bot->respond( $convo->id, (string) $req->get_param( 'text' ), $req->get_param( 'flow_id' ) );
 		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * Consume the visitor and IP bot rate-limit buckets.
+	 *
+	 * @param object $visitor Visitor row.
+	 * @return false|WP_Error
+	 */
+	public function check_bot_rate_limit( $visitor ) {
+		$limit  = max( 1, (int) ABChat_Settings::get( 'bot_rate_limit', 10 ) );
+		$window = max( 10, (int) ABChat_Settings::get( 'bot_rate_window', 60 ) );
+		$ip     = ! empty( $visitor->ip ) ? (string) $visitor->ip : '';
+		$keys   = array(
+			array( 'abchat_bot_v_' . (int) $visitor->id, $limit ),
+		);
+
+		if ( '' !== $ip ) {
+			$keys[] = array( 'abchat_bot_ip_' . md5( $ip ), $limit * 3 );
+		}
+
+		/**
+		 * Filter bot rate-limit buckets for custom proxy or cache setups.
+		 *
+		 * @param array  $keys    Array of { transient key, limit } pairs.
+		 * @param object $visitor Visitor row.
+		 * @param int    $window  Window length in seconds.
+		 */
+		$keys = apply_filters( 'abchat_bot_rate_limit_keys', $keys, $visitor, $window );
+
+		foreach ( (array) $keys as $bucket ) {
+			if ( ! is_array( $bucket ) || count( $bucket ) < 2 ) {
+				continue;
+			}
+
+			$key   = sanitize_key( $bucket[0] );
+			$max   = max( 1, (int) $bucket[1] );
+			$state = get_transient( $key );
+			if ( ! is_array( $state ) || empty( $state['reset'] ) || (int) $state['reset'] <= time() ) {
+				$state = array( 'count' => 0, 'reset' => time() + $window );
+			}
+
+			if ( (int) $state['count'] >= $max ) {
+				$retry_after = max( 1, (int) $state['reset'] - time() );
+				return new WP_Error(
+					'abchat_bot_rate_limited',
+					__( 'Too many chatbot requests. Please wait and try again.', 'abibitumi-chat' ),
+					array( 'status' => 429, 'retry_after' => $retry_after )
+				);
+			}
+
+			$state['count']++;
+			set_transient( $key, $state, max( 1, (int) $state['reset'] - time() ) );
+		}
+
+		return false;
 	}
 
 	/**

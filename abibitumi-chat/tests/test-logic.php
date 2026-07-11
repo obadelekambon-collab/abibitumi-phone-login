@@ -11,6 +11,7 @@ define( 'ABCHAT_DIR', dirname( __DIR__ ) . '/' );
 define( 'DAY_IN_SECONDS', 86400 );
 
 $__options = array();
+$__transients = array();
 
 // --- Minimal WP stubs --------------------------------------------------- //
 function __( $s, $d = null ) { return $s; }
@@ -28,11 +29,21 @@ function sanitize_file_name( $s ) { return preg_replace( '/[^a-zA-Z0-9._-]/', ''
 function wp_kses_post( $s ) { return $s; }
 function wp_parse_url( $url, $c = -1 ) { return parse_url( $url, $c ); }
 function home_url( $p = '' ) { return 'https://abibitumi.com' . $p; }
+function sanitize_key( $s ) { return preg_replace( '/[^a-z0-9_-]/', '', strtolower( $s ) ); }
+function get_transient( $key ) { global $__transients; return isset( $__transients[ $key ] ) ? $__transients[ $key ] : false; }
+function set_transient( $key, $value, $expiration ) { global $__transients; $__transients[ $key ] = $value; return true; }
 function is_wp_error( $value ) { return $value instanceof WP_Error; }
 function wp_remote_retrieve_response_code( $response ) { return isset( $response['response']['code'] ) ? $response['response']['code'] : 0; }
 function wp_remote_retrieve_body( $response ) { return isset( $response['body'] ) ? $response['body'] : ''; }
 function wp_remote_post( $url, $args ) { global $__remote_response, $__remote_request; $__remote_request = array( 'url' => $url, 'args' => $args ); return $__remote_response; }
-class WP_Error {}
+class WP_Error {
+	public $code;
+	public $message;
+	public $data;
+	public function __construct( $code = '', $message = '', $data = null ) { $this->code = $code; $this->message = $message; $this->data = $data; }
+	public function get_error_code() { return $this->code; }
+	public function get_error_data() { return $this->data; }
+}
 
 // Stub ABChat_DB so the chatbot's respond() can run without a database.
 class ABChat_DB {
@@ -44,6 +55,7 @@ class ABChat_DB {
 require __DIR__ . '/../includes/class-abchat-settings.php';
 require __DIR__ . '/../includes/class-abchat-chatbot.php';
 require __DIR__ . '/../includes/class-abchat-gemini.php';
+require __DIR__ . '/../includes/class-abchat-rest.php';
 
 $pass = 0; $fail = 0;
 function ok( $cond, $label ) {
@@ -59,6 +71,7 @@ ok( count( $defaults['bot_flows'] ) === 3, 'three starter bot flows' );
 ok( $defaults['primary_color'] === '#0b7d3e', 'brand green default' );
 ok( $defaults['bot_ai_enabled'] === 0, 'Gemini disabled by default' );
 ok( $defaults['gemini_model'] === 'gemini-2.5-flash', 'Gemini model has a portable default' );
+ok( $defaults['bot_rate_limit'] === 10 && $defaults['bot_rate_window'] === 60, 'bot rate limit has portable defaults' );
 
 echo "== Office hours ==\n";
 // Disabled => always open.
@@ -129,6 +142,30 @@ $__remote_response = new WP_Error();
 ok( $gemini->filter_response( $rule, 'Question', 1 ) === $rule, 'Gemini transport error preserves rule response' );
 $__remote_response = array( 'response' => array( 'code' => 429 ), 'body' => '{}' );
 ok( $gemini->filter_response( $rule, 'Question', 1 ) === $rule, 'Gemini API error preserves rule response' );
+
+echo "== Bot endpoint rate limit ==\n";
+$__transients = array();
+ABChat_Settings::update( array( 'bot_rate_limit' => 3, 'bot_rate_window' => 60 ) );
+$rest    = new ABChat_REST();
+$visitor = (object) array( 'id' => 7, 'ip' => '192.0.2.10' );
+ok( false === $rest->check_bot_rate_limit( $visitor ), 'first bot request allowed' );
+ok( false === $rest->check_bot_rate_limit( $visitor ), 'second bot request allowed' );
+ok( false === $rest->check_bot_rate_limit( $visitor ), 'request at visitor limit allowed' );
+$limited = $rest->check_bot_rate_limit( $visitor );
+ok( is_wp_error( $limited ) && 'abchat_bot_rate_limited' === $limited->get_error_code(), 'request above visitor limit rejected' );
+ok( 429 === $limited->get_error_data()['status'] && $limited->get_error_data()['retry_after'] > 0, 'rate-limit error includes status and retry timing' );
+
+$__transients = array();
+$limited      = false;
+for ( $i = 1; $i <= 10; $i++ ) {
+	$rotated = (object) array( 'id' => 100 + $i, 'ip' => '192.0.2.20' );
+	$result  = $rest->check_bot_rate_limit( $rotated );
+	if ( is_wp_error( $result ) ) {
+		$limited = $result;
+		break;
+	}
+}
+ok( 10 === $i && is_wp_error( $limited ), 'IP bucket blocks new-session visitor rotation' );
 
 echo "== VAPID key generation ==\n";
 require __DIR__ . '/../includes/class-abchat-notifications.php';

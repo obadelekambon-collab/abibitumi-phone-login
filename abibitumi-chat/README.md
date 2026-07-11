@@ -98,6 +98,12 @@ rule engine. A response containing only `HANDOFF` escalates to a human using
 the configured fallback message. Other providers can still replace the result
 through the same filter at a different priority.
 
+The visitor-facing bot endpoint is rate-limited by both visitor and IP. The
+visitor request count and window are configurable under **Chat → Settings →
+Chatbot**; the IP ceiling is three times the visitor ceiling so ordinary shared
+networks have headroom while repeated new-session abuse is still contained.
+Exceeded requests receive HTTP `429` with retry timing.
+
 ## Extending
 - `abchat_bot_response` (filter) — return a string or
   `{ reply, quickReplies, handoff }` to swap the rule engine for an LLM.

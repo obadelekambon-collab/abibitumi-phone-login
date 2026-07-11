@@ -72,6 +72,8 @@ class ABChat_Settings {
 			'bot_ai_enabled'     => 0,
 			'gemini_api_key'     => '',
 			'gemini_model'       => 'gemini-2.5-flash',
+			'bot_rate_limit'     => 10,
+			'bot_rate_window'    => 60,
 
 			// Notifications.
 			'notify_email'       => get_option( 'admin_email' ),
