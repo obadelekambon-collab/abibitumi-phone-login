@@ -54,6 +54,7 @@ class ABChat_Settings {
 			'require_login'      => 0,
 			'file_uploads'       => 1,
 			'max_upload_mb'      => 5,
+			'max_message_length' => 5000,
 			'poll_interval'      => 4, // seconds (visitor widget).
 			'agent_poll_interval'=> 3, // seconds (dashboard).
 			'stream_enabled'     => 0, // Optional SSE; polling remains the fallback.
@@ -227,6 +228,7 @@ class ABChat_Settings {
 			'requireLogin'    => (bool) $s['require_login'],
 			'fileUploads'     => (bool) $s['file_uploads'],
 			'maxUploadMb'     => (int) $s['max_upload_mb'],
+			'maxMessageLength' => (int) $s['max_message_length'],
 			'pollInterval'    => max( 2, (int) $s['poll_interval'] ),
 			'streamEnabled'   => (bool) $s['stream_enabled'],
 			'botEnabled'      => (bool) $s['bot_enabled'],

@@ -422,6 +422,9 @@ class ABChat_REST {
 		if ( '' === $body ) {
 			return new WP_Error( 'abchat_empty', __( 'Message is empty.', 'abibitumi-chat' ), array( 'status' => 400 ) );
 		}
+		if ( $this->message_too_long( $body ) ) {
+			return new WP_Error( 'abchat_message_too_long', __( 'Message is too long.', 'abibitumi-chat' ), array( 'status' => 400 ) );
+		}
 
 		$msg_id = ABChat_DB::add_message( array(
 			'conversation_id' => $convo->id,
@@ -545,8 +548,12 @@ class ABChat_REST {
 		if ( is_wp_error( $limited ) ) {
 			return $limited;
 		}
+		$text = (string) $req->get_param( 'text' );
+		if ( $this->message_too_long( $text ) ) {
+			return new WP_Error( 'abchat_message_too_long', __( 'Message is too long.', 'abibitumi-chat' ), array( 'status' => 400 ) );
+		}
 		$bot    = new ABChat_Chatbot();
-		$result = $bot->respond( $convo->id, (string) $req->get_param( 'text' ), $req->get_param( 'flow_id' ) );
+		$result = $bot->respond( $convo->id, $text, $req->get_param( 'flow_id' ) );
 		return new WP_REST_Response( $result, 200 );
 	}
 
@@ -715,6 +722,18 @@ class ABChat_REST {
 	}
 
 	/**
+	 * Whether a message exceeds the configured Unicode character ceiling.
+	 *
+	 * @param string $text Message text.
+	 * @return bool
+	 */
+	protected function message_too_long( $text ) {
+		$max    = max( 100, (int) ABChat_Settings::get( 'max_message_length', 5000 ) );
+		$length = function_exists( 'mb_strlen' ) ? mb_strlen( $text, 'UTF-8' ) : strlen( $text );
+		return $length > $max;
+	}
+
+	/**
 	 * Validated file upload from a visitor or operator.
 	 *
 	 * @param WP_REST_Request $req Request.
@@ -825,6 +844,9 @@ class ABChat_REST {
 
 		if ( '' === $body ) {
 			return new WP_Error( 'abchat_empty', __( 'Message is empty.', 'abibitumi-chat' ), array( 'status' => 400 ) );
+		}
+		if ( $this->message_too_long( $body ) ) {
+			return new WP_Error( 'abchat_message_too_long', __( 'Message is too long.', 'abibitumi-chat' ), array( 'status' => 400 ) );
 		}
 
 		// Auto-claim if unassigned.

@@ -251,4 +251,21 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'SameSite=Strict', $headers['Set-Cookie'] );
 		$this->assertStringNotContainsString( 'token=', file_get_contents( ABCHAT_DIR . 'assets/js/widget.js' ) );
 	}
+
+	/**
+	 * Oversized visitor and bot inputs are rejected before persistence or AI.
+	 */
+	public function test_visitor_payload_length_is_bounded() {
+		ABChat_Settings::update( array( 'max_message_length' => 100 ) );
+		$visitor = ABChat_DB::get_or_create_visitor( 'oversized-message-token' );
+		$convo_id = ABChat_DB::create_conversation( array( 'visitor_id' => $visitor->id ) );
+		$request = new WP_REST_Request( 'POST', '/abchat/v1/message' );
+		$request->set_param( '_visitor', $visitor );
+		$request->set_param( 'conversation_id', $convo_id );
+		$request->set_param( 'body', str_repeat( 'x', 101 ) );
+		$result = ( new ABChat_REST() )->visitor_message( $request );
+		$this->assertWPError( $result );
+		$this->assertSame( 'abchat_message_too_long', $result->get_error_code() );
+		$this->assertCount( 0, ABChat_DB::get_messages( $convo_id ) );
+	}
 }

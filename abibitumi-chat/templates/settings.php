@@ -155,6 +155,10 @@ $checkbox = function ( $name, $val, $label ) {
 					<td><input name="max_upload_mb" id="max_upload_mb" type="number" min="1" value="<?php echo esc_attr( $s['max_upload_mb'] ); ?>"></td>
 				</tr>
 				<tr>
+					<th><label for="max_message_length"><?php esc_html_e( 'Max message length', 'abibitumi-chat' ); ?></label></th>
+					<td><label><input name="max_message_length" id="max_message_length" type="number" min="100" value="<?php echo esc_attr( $s['max_message_length'] ); ?>"> <?php esc_html_e( 'characters', 'abibitumi-chat' ); ?></label></td>
+				</tr>
+				<tr>
 					<th><?php esc_html_e( 'Poll interval (s)', 'abibitumi-chat' ); ?></th>
 					<td>
 						<label><?php esc_html_e( 'Visitor', 'abibitumi-chat' ); ?> <input name="poll_interval" type="number" min="2" value="<?php echo esc_attr( $s['poll_interval'] ); ?>"></label>

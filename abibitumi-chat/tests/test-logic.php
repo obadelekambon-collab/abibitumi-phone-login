@@ -111,6 +111,7 @@ ok( $defaults['bot_rate_limit'] === 10 && $defaults['bot_rate_window'] === 60, '
 ok( $defaults['session_rate_limit'] === 30 && $defaults['session_rate_window'] === 3600, 'new-session rate limit has portable defaults' );
 ok( $defaults['message_rate_limit'] === 30 && $defaults['message_rate_window'] === 60, 'visitor message rate limit has portable defaults' );
 ok( $defaults['conversation_rate_limit'] === 10 && $defaults['conversation_rate_window'] === 3600, 'conversation rate limit has portable defaults' );
+ok( $defaults['max_message_length'] === 5000, 'message length has a portable default' );
 ok( $defaults['stream_enabled'] === 0 && $defaults['stream_duration'] === 25, 'SSE transport is optional with a bounded default duration' );
 ok( $defaults['retention_enabled'] === 0 && $defaults['retention_days'] === 365, 'retention is opt-in with a one-year default policy' );
 

@@ -216,6 +216,7 @@ class ABChat_Admin {
 			'require_login'       => $checkbox( 'require_login' ),
 			'file_uploads'        => $checkbox( 'file_uploads' ),
 			'max_upload_mb'       => absint( isset( $in['max_upload_mb'] ) ? $in['max_upload_mb'] : 5 ),
+			'max_message_length'  => max( 100, absint( isset( $in['max_message_length'] ) ? $in['max_message_length'] : 5000 ) ),
 			'poll_interval'       => max( 2, absint( isset( $in['poll_interval'] ) ? $in['poll_interval'] : 4 ) ),
 			'agent_poll_interval' => max( 2, absint( isset( $in['agent_poll_interval'] ) ? $in['agent_poll_interval'] : 3 ) ),
 			'stream_enabled'      => $checkbox( 'stream_enabled' ),

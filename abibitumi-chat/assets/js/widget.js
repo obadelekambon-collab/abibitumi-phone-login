@@ -139,7 +139,7 @@
 			'<div class="abchat-typing" id="abchat-typing" hidden><span></span><span></span><span></span></div>' +
 			'<form class="abchat-input" id="abchat-form">' +
 				( CFG.fileUploads ? '<label class="abchat-attach" title="' + esc( I18N.attach ) + '"><input type="file" hidden><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M16.5 6v11.5a4 4 0 01-8 0V5a2.5 2.5 0 015 0v10.5a1 1 0 01-2 0V6H10v9.5a2.5 2.5 0 005 0V5a4 4 0 00-8 0v12.5a5.5 5.5 0 0011 0V6z"/></svg></label>' : '' ) +
-				'<textarea id="abchat-text" rows="1" placeholder="' + esc( I18N.typeMessage ) + '"></textarea>' +
+				'<textarea id="abchat-text" rows="1" maxlength="' + Number( CFG.maxMessageLength || 5000 ) + '" placeholder="' + esc( I18N.typeMessage ) + '"></textarea>' +
 				'<button type="submit" class="abchat-send" aria-label="' + esc( I18N.send ) + '"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></button>' +
 			'</form>' +
 			'<div class="abchat-footer">' + esc( I18N.poweredBy ) + '</div>';

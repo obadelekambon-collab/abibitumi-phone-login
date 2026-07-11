@@ -44,7 +44,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<div class="abchat-reply">
 						<div class="abchat-canned-pop" id="abchat-canned-pop" hidden></div>
 						<form class="abchat-reply-form" id="abchat-reply-form">
-							<textarea id="abchat-reply" placeholder="<?php esc_attr_e( 'Type your reply…  (use / for canned replies)', 'abibitumi-chat' ); ?>"></textarea>
+							<textarea id="abchat-reply" maxlength="<?php echo esc_attr( ABChat_Settings::get( 'max_message_length', 5000 ) ); ?>" placeholder="<?php esc_attr_e( 'Type your reply…  (use / for canned replies)', 'abibitumi-chat' ); ?>"></textarea>
 							<div class="abchat-reply-tools">
 								<button type="submit" class="button button-primary"><?php esc_html_e( 'Send', 'abibitumi-chat' ); ?></button>
 								<button type="button" class="button" id="abchat-note-btn" title="<?php esc_attr_e( 'Internal note (visitor cannot see)', 'abibitumi-chat' ); ?>"><?php esc_html_e( 'Note', 'abibitumi-chat' ); ?></button>
