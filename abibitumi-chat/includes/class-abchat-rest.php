@@ -362,7 +362,7 @@ class ABChat_REST {
 		return new WP_REST_Response(
 			array(
 				'conversation' => $this->shape_conversation( $convo ),
-				'messages'     => $this->shape_messages( ABChat_DB::get_messages( $convo_id ) ),
+				'messages'     => $this->shape_messages( ABChat_DB::get_messages( $convo_id ), false ),
 				'isOpen'       => $open,
 			),
 			200
@@ -427,7 +427,7 @@ class ABChat_REST {
 
 		return new WP_REST_Response(
 			array(
-				'messages'      => $this->shape_messages( $messages ),
+				'messages'      => $this->shape_messages( $messages, false ),
 				'agentTyping'   => ABChat_DB::is_typing( $convo->id, 'operator' ),
 				'status'        => $convo->status,
 				'operatorName'  => $this->operator_name( $convo->operator_id ),
@@ -1041,12 +1041,16 @@ class ABChat_REST {
 	/**
 	 * Shape messages for output.
 	 *
-	 * @param array $messages Rows.
+	 * @param array $messages      Rows.
+	 * @param bool  $include_notes Whether internal notes may be returned.
 	 * @return array
 	 */
-	protected function shape_messages( $messages ) {
+	protected function shape_messages( $messages, $include_notes = true ) {
 		$out = array();
 		foreach ( (array) $messages as $m ) {
+			if ( ! $include_notes && 'note' === $m->type ) {
+				continue;
+			}
 			$out[] = array(
 				'id'         => (int) $m->id,
 				'senderType' => $m->sender_type,

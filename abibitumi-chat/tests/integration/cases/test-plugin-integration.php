@@ -192,4 +192,36 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertSame( 'abchat_no_token', $result->get_error_code() );
 	}
+
+	/**
+	 * Internal operator notes never enter visitor REST payloads.
+	 */
+	public function test_visitor_poll_excludes_internal_notes_server_side() {
+		$visitor = ABChat_DB::get_or_create_visitor( 'internal-note-privacy-token' );
+		$convo_id = ABChat_DB::create_conversation( array( 'visitor_id' => $visitor->id ) );
+		ABChat_DB::add_message(
+			array(
+				'conversation_id' => $convo_id,
+				'sender_type'     => 'system',
+				'body'            => 'Private operator context',
+				'type'            => 'note',
+			)
+		);
+		ABChat_DB::add_message(
+			array(
+				'conversation_id' => $convo_id,
+				'sender_type'     => 'operator',
+				'body'            => 'Public reply',
+				'type'            => 'text',
+			)
+		);
+		$request = new WP_REST_Request( 'GET', '/abchat/v1/poll' );
+		$request->set_param( '_visitor', $visitor );
+		$request->set_param( 'conversation_id', $convo_id );
+
+		$data = ( new ABChat_REST() )->poll( $request )->get_data();
+		$this->assertCount( 1, $data['messages'] );
+		$this->assertSame( 'Public reply', $data['messages'][0]['body'] );
+		$this->assertStringNotContainsString( 'Private operator context', wp_json_encode( $data ) );
+	}
 }

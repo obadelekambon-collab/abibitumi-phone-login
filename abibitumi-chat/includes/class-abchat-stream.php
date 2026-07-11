@@ -137,7 +137,7 @@ class ABChat_Stream {
 		}
 
 		return array(
-			'messages'     => $this->shape_messages( ABChat_DB::get_messages( $convo->id, (int) $request->get_param( 'after' ) ) ),
+			'messages'     => $this->shape_messages( ABChat_DB::get_messages( $convo->id, (int) $request->get_param( 'after' ) ), false ),
 			'agentTyping'  => ABChat_DB::is_typing( $convo->id, 'operator' ),
 			'status'       => $convo->status,
 			'operatorName' => $this->operator_name( $convo->operator_id ),
@@ -163,12 +163,16 @@ class ABChat_Stream {
 	/**
 	 * Shape message rows for stream clients.
 	 *
-	 * @param array $messages Message rows.
+	 * @param array $messages      Message rows.
+	 * @param bool  $include_notes Whether internal notes may be returned.
 	 * @return array
 	 */
-	protected function shape_messages( $messages ) {
+	protected function shape_messages( $messages, $include_notes = true ) {
 		$out = array();
 		foreach ( (array) $messages as $message ) {
+			if ( ! $include_notes && 'note' === $message->type ) {
+				continue;
+			}
 			$out[] = array(
 				'id'         => (int) $message->id,
 				'senderType' => $message->sender_type,
