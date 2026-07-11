@@ -28,7 +28,8 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 	 * Activation persists the root service-worker and manifest routes.
 	 */
 	public function test_activation_flushes_pwa_rewrite_routes() {
-		$rules = get_option( 'rewrite_rules', array() );
+		global $wp_rewrite;
+		$rules = $wp_rewrite->extra_rules_top;
 		$this->assertArrayHasKey( '^abchat-sw\.js$', $rules );
 		$this->assertArrayHasKey( '^abchat-manifest\.json$', $rules );
 	}
