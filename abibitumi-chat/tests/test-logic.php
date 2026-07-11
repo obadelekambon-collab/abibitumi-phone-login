@@ -31,7 +31,9 @@ function wp_json_encode( $v, $opts = 0 ) { return json_encode( $v, $opts ); }
 function current_time( $type ) { return ( 'timestamp' === $type ) ? time() : date( 'Y-m-d H:i:s' ); }
 function wp_date( $fmt, $ts = null ) { return date( $fmt, $ts ?: time() ); }
 function sanitize_file_name( $s ) { return preg_replace( '/[^a-zA-Z0-9._-]/', '', $s ); }
+function sanitize_text_field( $s ) { return trim( strip_tags( (string) $s ) ); }
 function sanitize_email( $s ) { return filter_var( $s, FILTER_SANITIZE_EMAIL ); }
+function esc_url_raw( $s ) { return filter_var( $s, FILTER_VALIDATE_URL ) ? $s : ''; }
 function wp_kses_post( $s ) { return $s; }
 function wp_parse_url( $url, $c = -1 ) { return parse_url( $url, $c ); }
 function home_url( $p = '' ) { return 'https://abibitumi.com' . $p; }
