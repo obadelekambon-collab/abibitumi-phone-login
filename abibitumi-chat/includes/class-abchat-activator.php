@@ -25,6 +25,7 @@ class ABChat_Activator {
 		}
 
 		// VAPID keys for Web Push are generated lazily by the notifications class.
+		ABChat_Retention::schedule();
 		update_option( 'abchat_db_version', ABCHAT_VERSION, false );
 		flush_rewrite_rules();
 	}
@@ -35,6 +36,7 @@ class ABChat_Activator {
 	 * @return void
 	 */
 	public static function deactivate() {
+		wp_clear_scheduled_hook( ABChat_Retention::HOOK );
 		flush_rewrite_rules();
 	}
 

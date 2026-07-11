@@ -65,8 +65,8 @@ The same checks run in GitHub Actions on PHP 7.4 and 8.3 plus Node 20 via
   current; move to the maintained release line when the minimum PHP version
   can be raised.
 - Automated PHPUnit + WP test-suite harness alongside `tests/test-logic.php`.
-- Conversation export (CSV), GDPR erase hooks, and a knowledge-base article
-  suggester.
+- Knowledge-base article suggestions for recurring questions.
+- Expand automated coverage with the WordPress integration test suite.
 
 ## Guardrails
 

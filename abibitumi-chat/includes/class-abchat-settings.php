@@ -60,6 +60,11 @@ class ABChat_Settings {
 			'stream_duration'    => 25, // seconds per SSE connection.
 			'transcript_email'   => 1, // email transcript to visitor on close.
 
+			// Data lifecycle.
+			'retention_enabled'  => 0,
+			'retention_days'     => 365,
+			'retention_batch'    => 100,
+
 			// Office hours (24h, site timezone). Empty = always open.
 			'office_hours_enabled' => 0,
 			'office_hours'         => self::default_hours(),

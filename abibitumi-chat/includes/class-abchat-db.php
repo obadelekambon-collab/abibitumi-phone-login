@@ -134,7 +134,7 @@ class ABChat_DB {
 	 * Erase visitor records and their conversation transcripts by email.
 	 *
 	 * @param string $email Visitor email.
-	 * @return int Number of visitor records erased.
+	 * @return array Number of visitors and attachment URLs.
 	 */
 	public static function erase_privacy_records( $email ) {
 		global $wpdb;
@@ -142,16 +142,68 @@ class ABChat_DB {
 		$convos   = self::table( 'conversations' );
 		$messages = self::table( 'messages' );
 		$rows     = $wpdb->get_results( $wpdb->prepare( "SELECT id FROM {$visitors} WHERE email = %s", $email ) ); // phpcs:ignore WordPress.DB
+		$attachments = array();
 
 		foreach ( (array) $rows as $visitor ) {
 			$conversation_ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$convos} WHERE visitor_id = %d", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
 			foreach ( (array) $conversation_ids as $conversation_id ) {
+				$urls        = $wpdb->get_col( $wpdb->prepare( "SELECT attachment_url FROM {$messages} WHERE conversation_id = %d AND attachment_url <> %s", (int) $conversation_id, '' ) ); // phpcs:ignore WordPress.DB
+				$attachments = array_merge( $attachments, (array) $urls );
 				$wpdb->query( $wpdb->prepare( "DELETE FROM {$messages} WHERE conversation_id = %d", (int) $conversation_id ) ); // phpcs:ignore WordPress.DB
 			}
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$convos} WHERE visitor_id = %d", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$visitors} WHERE id = %d", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
 		}
-		return count( $rows );
+		return array( 'visitors' => count( $rows ), 'attachments' => array_values( array_unique( $attachments ) ) );
+	}
+
+	/**
+	 * Delete a bounded batch of old closed conversations and orphan visitors.
+	 *
+	 * @param string $cutoff MySQL datetime cutoff.
+	 * @param int    $limit  Maximum conversations per run.
+	 * @return array Counts and attachment URLs.
+	 */
+	public static function cleanup_expired_data( $cutoff, $limit = 100 ) {
+		global $wpdb;
+		$visitors = self::table( 'visitors' );
+		$convos   = self::table( 'conversations' );
+		$messages = self::table( 'messages' );
+		$limit    = max( 1, min( 1000, (int) $limit ) );
+		$ids      = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT id FROM {$convos} WHERE status = %s AND last_message_at < %s ORDER BY id ASC LIMIT %d",
+				'closed',
+				$cutoff,
+				$limit
+			)
+		); // phpcs:ignore WordPress.DB
+
+		$result = array( 'conversations' => 0, 'messages' => 0, 'visitors' => 0, 'attachments' => array() );
+		if ( $ids ) {
+			$ids          = array_map( 'intval', $ids );
+			$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+			$result['attachments'] = $wpdb->get_col(
+				$wpdb->prepare(
+					"SELECT attachment_url FROM {$messages} WHERE conversation_id IN ({$placeholders}) AND attachment_url <> %s",
+					array_merge( $ids, array( '' ) )
+				)
+			); // phpcs:ignore WordPress.DB
+			$result['messages'] = (int) $wpdb->query(
+				$wpdb->prepare( "DELETE FROM {$messages} WHERE conversation_id IN ({$placeholders})", $ids )
+			); // phpcs:ignore WordPress.DB
+			$result['conversations'] = (int) $wpdb->query(
+				$wpdb->prepare( "DELETE FROM {$convos} WHERE id IN ({$placeholders})", $ids )
+			); // phpcs:ignore WordPress.DB
+		}
+
+		$result['visitors'] = (int) $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$visitors} WHERE last_seen < %s AND NOT EXISTS (SELECT 1 FROM {$convos} WHERE {$convos}.visitor_id = {$visitors}.id)",
+				$cutoff
+			)
+		); // phpcs:ignore WordPress.DB
+		return $result;
 	}
 
 	/* --------------------------------------------------------------------- */

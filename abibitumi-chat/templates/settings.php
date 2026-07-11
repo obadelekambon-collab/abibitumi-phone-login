@@ -41,6 +41,9 @@ $checkbox = function ( $name, $val, $label ) {
 	<?php if ( isset( $_GET['imported'] ) ) : ?>
 		<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Settings imported.', 'abibitumi-chat' ); ?></p></div>
 	<?php endif; ?>
+	<?php if ( isset( $_GET['cleanup'] ) ) : ?>
+		<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Retention cleanup completed.', 'abibitumi-chat' ); ?></p></div>
+	<?php endif; ?>
 	<?php if ( isset( $_GET['error'] ) ) : ?>
 		<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'That action could not be completed. Check the file or preset and try again.', 'abibitumi-chat' ); ?></p></div>
 	<?php endif; ?>
@@ -335,8 +338,57 @@ $checkbox = function ( $name, $val, $label ) {
 			</table>
 		</div>
 
+		<!-- Data retention -->
+		<div class="abchat-section">
+			<h2><?php esc_html_e( 'Data retention', 'abibitumi-chat' ); ?></h2>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th><?php esc_html_e( 'Automatic cleanup', 'abibitumi-chat' ); ?></th>
+					<td>
+						<?php $checkbox( 'retention_enabled', $s['retention_enabled'], __( 'Delete expired closed conversations once per day', 'abibitumi-chat' ) ); ?>
+						<p class="description"><?php esc_html_e( 'Disabled by default. Open or pending conversations are never removed.', 'abibitumi-chat' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th><?php esc_html_e( 'Retention policy', 'abibitumi-chat' ); ?></th>
+					<td>
+						<label><input name="retention_days" type="number" min="1" value="<?php echo esc_attr( $s['retention_days'] ); ?>"> <?php esc_html_e( 'days', 'abibitumi-chat' ); ?></label>
+						&nbsp;&nbsp;
+						<label><input name="retention_batch" type="number" min="10" max="1000" value="<?php echo esc_attr( $s['retention_batch'] ); ?>"> <?php esc_html_e( 'conversations per run', 'abibitumi-chat' ); ?></label>
+					</td>
+				</tr>
+			</table>
+		</div>
+
 		<?php submit_button( __( 'Save settings', 'abibitumi-chat' ) ); ?>
 	</form>
+
+	<?php $last_cleanup = get_option( 'abchat_last_cleanup', array() ); ?>
+	<div class="abchat-section">
+		<h2><?php esc_html_e( 'Run retention cleanup', 'abibitumi-chat' ); ?></h2>
+		<?php if ( ! empty( $last_cleanup['ran_at'] ) ) : ?>
+			<p class="description">
+				<?php
+				echo esc_html(
+					sprintf(
+						/* translators: 1: cleanup date, 2: conversations, 3: messages, 4: visitors, 5: attachments. */
+						__( 'Last run %1$s: %2$d conversations, %3$d messages, %4$d visitors, and %5$d attachments removed.', 'abibitumi-chat' ),
+						$last_cleanup['ran_at'],
+						(int) $last_cleanup['conversations'],
+						(int) $last_cleanup['messages'],
+						(int) $last_cleanup['visitors'],
+						(int) $last_cleanup['attachments']
+					)
+				);
+				?>
+			</p>
+		<?php endif; ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="abchat_run_cleanup">
+			<?php wp_nonce_field( 'abchat_run_cleanup' ); ?>
+			<button type="submit" class="button" <?php disabled( empty( $s['retention_enabled'] ) ); ?>><?php esc_html_e( 'Run cleanup now', 'abibitumi-chat' ); ?></button>
+		</form>
+	</div>
 </div>
 
 <script>

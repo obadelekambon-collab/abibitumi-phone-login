@@ -75,6 +75,13 @@ class ABChat_Plugin {
 	public $web_push;
 
 	/**
+	 * Scheduled data-retention controller.
+	 *
+	 * @var ABChat_Retention
+	 */
+	public $retention;
+
+	/**
 	 * Boot.
 	 */
 	public function __construct() {
@@ -89,6 +96,7 @@ class ABChat_Plugin {
 		$this->stream        = new ABChat_Stream();
 		$this->privacy       = new ABChat_Privacy();
 		$this->web_push      = new ABChat_Web_Push();
+		$this->retention     = new ABChat_Retention();
 
 		$this->rest->init();
 		$this->widget->init();
@@ -98,6 +106,7 @@ class ABChat_Plugin {
 		$this->stream->init();
 		$this->privacy->init();
 		$this->web_push->init();
+		$this->retention->init();
 
 		if ( is_admin() ) {
 			$this->admin->init();

@@ -107,12 +107,15 @@ class ABChat_Privacy {
 	 * @return array
 	 */
 	public function erase( $email_address, $page = 1 ) {
-		$removed = 0;
+		$removed = array( 'visitors' => 0, 'attachments' => array() );
 		if ( 1 === (int) $page ) {
 			$removed = ABChat_DB::erase_privacy_records( sanitize_email( $email_address ) );
 		}
+		foreach ( (array) $removed['attachments'] as $url ) {
+			ABChat_Retention::delete_local_attachment( $url );
+		}
 		return array(
-			'items_removed'  => $removed > 0,
+			'items_removed'  => $removed['visitors'] > 0,
 			'items_retained' => false,
 			'messages'       => array(),
 			'done'           => true,

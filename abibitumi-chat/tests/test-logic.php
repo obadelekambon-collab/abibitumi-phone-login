@@ -39,6 +39,8 @@ function current_user_can( $capability ) { return false; }
 function sanitize_key( $s ) { return preg_replace( '/[^a-z0-9_-]/', '', strtolower( $s ) ); }
 function get_transient( $key ) { global $__transients; return isset( $__transients[ $key ] ) ? $__transients[ $key ] : false; }
 function set_transient( $key, $value, $expiration ) { global $__transients; $__transients[ $key ] = $value; return true; }
+function wp_next_scheduled( $hook ) { return false; }
+function wp_schedule_event( $timestamp, $recurrence, $hook ) { return true; }
 function is_wp_error( $value ) { return $value instanceof WP_Error; }
 function wp_remote_retrieve_response_code( $response ) { return isset( $response['response']['code'] ) ? $response['response']['code'] : 0; }
 function wp_remote_retrieve_body( $response ) { return isset( $response['body'] ) ? $response['body'] : ''; }
@@ -67,11 +69,18 @@ class ABChat_Test_REST_Request {
 // Stub ABChat_DB so the chatbot's respond() can run without a database.
 class ABChat_DB {
 	public static $messages = array();
+	public static $cleanup_calls = 0;
 	public static function add_message( $d ) { self::$messages[] = $d; return count( self::$messages ); }
 	public static function update_conversation( $id, $d ) {}
 	public static function privacy_records( $email ) { return array(); }
-	public static function erase_privacy_records( $email ) { return 'person@example.com' === $email ? 1 : 0; }
+	public static function erase_privacy_records( $email ) {
+		return array( 'visitors' => 'person@example.com' === $email ? 1 : 0, 'attachments' => array() );
+	}
 	public static function delete_push_by_endpoint( $endpoint ) {}
+	public static function cleanup_expired_data( $cutoff, $limit = 100 ) {
+		self::$cleanup_calls++;
+		return array( 'conversations' => 2, 'messages' => 5, 'visitors' => 1, 'attachments' => array() );
+	}
 }
 
 require __DIR__ . '/../includes/class-abchat-settings.php';
@@ -81,6 +90,7 @@ require __DIR__ . '/../includes/class-abchat-rest.php';
 require __DIR__ . '/../includes/class-abchat-stream.php';
 require __DIR__ . '/../includes/class-abchat-privacy.php';
 require __DIR__ . '/../includes/class-abchat-web-push.php';
+require __DIR__ . '/../includes/class-abchat-retention.php';
 
 $pass = 0; $fail = 0;
 function ok( $cond, $label ) {
@@ -98,6 +108,7 @@ ok( $defaults['bot_ai_enabled'] === 0, 'Gemini disabled by default' );
 ok( $defaults['gemini_model'] === 'gemini-2.5-flash', 'Gemini model has a portable default' );
 ok( $defaults['bot_rate_limit'] === 10 && $defaults['bot_rate_window'] === 60, 'bot rate limit has portable defaults' );
 ok( $defaults['stream_enabled'] === 0 && $defaults['stream_duration'] === 25, 'SSE transport is optional with a bounded default duration' );
+ok( $defaults['retention_enabled'] === 0 && $defaults['retention_days'] === 365, 'retention is opt-in with a one-year default policy' );
 
 echo "== Office hours ==\n";
 // Disabled => always open.
@@ -215,6 +226,16 @@ ok( true === $erased['items_removed'] && true === $erased['done'], 'privacy eras
 echo "== Web Push adapter ==\n";
 $dependency_loaded = class_exists( '\\Minishlink\\WebPush\\WebPush' );
 ok( $dependency_loaded === ABChat_Web_Push::is_available(), 'Web Push adapter availability follows Composer dependency' );
+
+echo "== Data retention ==\n";
+ABChat_DB::$cleanup_calls = 0;
+ABChat_Settings::update( array( 'retention_enabled' => 0 ) );
+$cleanup = ABChat_Retention::run();
+ok( 0 === ABChat_DB::$cleanup_calls && 0 === $cleanup['conversations'], 'disabled retention never deletes data' );
+ABChat_Settings::update( array( 'retention_enabled' => 1, 'retention_days' => 30, 'retention_batch' => 50 ) );
+$cleanup = ABChat_Retention::run();
+ok( 1 === ABChat_DB::$cleanup_calls && 2 === $cleanup['conversations'], 'enabled retention runs one bounded cleanup batch' );
+ok( 5 === $cleanup['messages'] && 1 === $cleanup['visitors'] && isset( $cleanup['ran_at'] ), 'retention records cleanup counts and run time' );
 
 echo "== VAPID key generation ==\n";
 require __DIR__ . '/../includes/class-abchat-notifications.php';

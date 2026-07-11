@@ -24,6 +24,7 @@ class ABChat_Admin {
 		add_action( 'admin_post_abchat_export_settings', array( $this, 'export_settings' ) );
 		add_action( 'admin_post_abchat_import_settings', array( $this, 'import_settings' ) );
 		add_action( 'admin_post_abchat_export_conversation', array( $this, 'export_conversation' ) );
+		add_action( 'admin_post_abchat_run_cleanup', array( $this, 'run_cleanup' ) );
 		add_action( 'admin_bar_menu', array( $this, 'admin_bar' ), 100 );
 	}
 
@@ -220,6 +221,9 @@ class ABChat_Admin {
 			'stream_enabled'      => $checkbox( 'stream_enabled' ),
 			'stream_duration'     => max( 10, min( 60, absint( isset( $in['stream_duration'] ) ? $in['stream_duration'] : 25 ) ) ),
 			'transcript_email'    => $checkbox( 'transcript_email' ),
+			'retention_enabled'   => $checkbox( 'retention_enabled' ),
+			'retention_days'      => max( 1, absint( isset( $in['retention_days'] ) ? $in['retention_days'] : 365 ) ),
+			'retention_batch'     => max( 10, min( 1000, absint( isset( $in['retention_batch'] ) ? $in['retention_batch'] : 100 ) ) ),
 			'office_hours_enabled'=> $checkbox( 'office_hours_enabled' ),
 			'offline_message'     => sanitize_textarea_field( isset( $in['offline_message'] ) ? $in['offline_message'] : '' ),
 			'bot_enabled'         => $checkbox( 'bot_enabled' ),
@@ -405,6 +409,21 @@ class ABChat_Admin {
 			);
 		}
 		fclose( $output ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+		exit;
+	}
+
+	/**
+	 * Run the configured retention cleanup on demand.
+	 *
+	 * @return void
+	 */
+	public function run_cleanup() {
+		if ( ! current_user_can( 'abchat_manage' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'abibitumi-chat' ) );
+		}
+		check_admin_referer( 'abchat_run_cleanup' );
+		ABChat_Retention::run();
+		wp_safe_redirect( add_query_arg( array( 'page' => 'abchat-settings', 'cleanup' => '1' ), admin_url( 'admin.php' ) ) );
 		exit;
 	}
 }

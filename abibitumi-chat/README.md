@@ -24,6 +24,7 @@ settings.
 | **Ratings** | Post-chat 1–5 star satisfaction rating + comment |
 | **Analytics** | Conversations, resolved, messages, average rating, per-day chart |
 | **Privacy** | WordPress personal-data export and erasure for visitor profiles and transcripts |
+| **Data retention** | Optional daily deletion of expired closed chats, orphan visitors, and local attachments |
 | **Notifications** | Agent email on new chat / offline lead / hand-off, visitor transcript email on close, browser notifications, Web Push |
 | **PWA** | Web app manifest + service worker, installable agent app, offline shell, push notifications |
 | **Departments** | Multiple queues with routing |
@@ -99,6 +100,16 @@ the existing visitor token; operator streams require the signed-in operator
 cookie and REST nonce. Connections are deliberately short and reconnect before
 common proxy timeouts. If a stream is rejected, buffered, or interrupted, the
 visitor widget and operator dashboard automatically resume REST polling.
+
+## Data retention
+
+Automatic retention is disabled by default. Administrators can enable it under
+**Chat → Settings → Data retention**, choose the age of closed conversations
+and a bounded batch size, and run the policy manually. A daily WP-Cron event
+removes only expired **closed** conversations, their messages, orphan visitor
+profiles, and attachments that resolve inside the site's uploads directory.
+Open and pending conversations are never removed. The settings screen records
+the most recent cleanup counts for operational visibility.
 
 ## Chatbot AI backend (optional, free tiers work)
 
