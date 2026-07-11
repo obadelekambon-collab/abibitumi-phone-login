@@ -117,8 +117,7 @@ jobs:
         run: |
           composer create-project wp-phpunit/wp-phpunit /tmp/wp-phpunit 5.8.10 --no-interaction --prefer-dist --no-progress
           curl -fsSL https://phar.phpunit.de/phpunit-7.5.20.phar -o /tmp/phpunit-7.5.20.phar
-          curl -fsSL https://phar.phpunit.de/phpunit-7.5.20.phar.sha256 -o /tmp/phpunit-7.5.20.phar.sha256
-          cd /tmp && sha256sum --check phpunit-7.5.20.phar.sha256
+          echo '472b6e275e4479bab71f2f7744d2e22ace9566a4e3cef37952e4d9c07f6d3a92  /tmp/phpunit-7.5.20.phar' | sha256sum --check
 
       - name: Install WordPress ${{ matrix.wordpress }}
         run: |
