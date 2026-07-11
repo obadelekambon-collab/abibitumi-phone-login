@@ -5,6 +5,10 @@ chatbots, ticketing, visitor tracking, canned responses, analytics, and an
 installable **PWA** for agents. No third-party SaaS, no monthly fee, no data
 leaving your server.
 
+On legacy MySQL `utf8mb3` sites, settings gracefully omit only unsupported
+four-byte characters such as emoji; modern `utf8mb4` sites retain the original
+text. This prevents one decorative character from blocking all settings.
+
 Built **web-first**, then **PWA**. Designed to be white-labelled and dropped
 onto multiple sites (abibitumi.com, repatriatetoghana.com,
 decadeofourrepatriation.com) — all branding, colours and copy are per-site

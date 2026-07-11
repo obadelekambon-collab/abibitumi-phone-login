@@ -196,9 +196,49 @@ class ABChat_Settings {
 	 */
 	public static function update( array $values ) {
 		$current     = self::all();
-		$merged      = array_merge( $current, $values );
+		$merged      = self::database_safe( array_merge( $current, $values ) );
 		self::$cache = $merged;
-		update_option( self::OPTION_KEY, $merged, false );
+		if ( false === get_option( self::OPTION_KEY, false ) ) {
+			add_option( self::OPTION_KEY, $merged, '', false );
+		} else {
+			update_option( self::OPTION_KEY, $merged, false );
+		}
+	}
+
+	/**
+	 * Remove only characters that a legacy utf8mb3 options table cannot store.
+	 *
+	 * Modern utf8mb4 sites retain the original text. This prevents one emoji
+	 * from causing WordPress to reject the complete serialized settings option.
+	 *
+	 * @param array $settings Settings tree.
+	 * @return array
+	 */
+	public static function database_safe( array $settings ) {
+		global $wpdb;
+		if ( ! isset( $wpdb ) || ! method_exists( $wpdb, 'get_col_charset' ) ) {
+			return $settings;
+		}
+		$charset = $wpdb->get_col_charset( $wpdb->options, 'option_value' );
+		if ( 'utf8mb4' === strtolower( (string) $charset ) ) {
+			return $settings;
+		}
+		return self::strip_four_byte( $settings );
+	}
+
+	/** Recursively strip Unicode code points unsupported by MySQL utf8mb3. */
+	public static function strip_four_byte( $value ) {
+		if ( is_array( $value ) ) {
+			foreach ( $value as $key => $item ) {
+				$value[ $key ] = self::strip_four_byte( $item );
+			}
+			return $value;
+		}
+		if ( is_string( $value ) ) {
+			$clean = preg_replace( '/[\x{10000}-\x{10FFFF}]/u', '', $value );
+			return null === $clean ? $value : $clean;
+		}
+		return $value;
 	}
 
 	/**

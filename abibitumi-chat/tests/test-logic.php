@@ -5,7 +5,7 @@
  */
 error_reporting( E_ALL & ~E_DEPRECATED );
 define( 'ABSPATH', '/tmp/' );
-define( 'ABCHAT_VERSION', '1.1.0' );
+define( 'ABCHAT_VERSION', '1.1.1' );
 define( 'ABCHAT_AGENT_CAP', 'abchat_agent' );
 define( 'ABCHAT_DIR', dirname( __DIR__ ) . '/' );
 define( 'DAY_IN_SECONDS', 86400 );
@@ -23,6 +23,7 @@ function __( $s, $d = null ) { return $s; }
 function get_bloginfo( $k = '' ) { return 'Abibitumi'; }
 function get_option( $k, $default = false ) { global $__options; return array_key_exists( $k, $__options ) ? $__options[ $k ] : $default; }
 function update_option( $k, $v, $a = null ) { global $__options; $__options[ $k ] = $v; return true; }
+function add_option( $k, $v, $deprecated = '', $autoload = null ) { global $__options; if ( array_key_exists( $k, $__options ) ) { return false; } $__options[ $k ] = $v; return true; }
 function wp_parse_args( $args, $defaults ) { return array_merge( $defaults, is_array( $args ) ? $args : array() ); }
 function apply_filters( $tag, $value ) { return $value; }
 function do_action() {}
@@ -124,6 +125,9 @@ ok( $defaults['max_message_length'] === 5000, 'message length has a portable def
 ok( $defaults['stream_enabled'] === 0 && $defaults['stream_duration'] === 25, 'SSE transport is optional with a bounded default duration' );
 ok( $defaults['retention_enabled'] === 0 && $defaults['retention_days'] === 365, 'retention is opt-in with a one-year default policy' );
 ok( $defaults['journey_tracking'] === 1 && $defaults['journey_limit'] === 20, 'privacy-safe visitor journey tracking has bounded defaults' );
+$legacy_text = ABChat_Settings::strip_four_byte( array( 'title' => 'Akwaaba 👋 — welcome', 'plain' => 'Twi àṣẹ' ) );
+ok( 'Akwaaba  — welcome' === $legacy_text['title'], 'legacy database fallback removes only unsupported four-byte characters' );
+ok( 'Twi àṣẹ' === $legacy_text['plain'], 'legacy database fallback preserves ordinary Unicode text' );
 
 echo "== PWA cache privacy ==\n";
 $service_worker = file_get_contents( ABCHAT_DIR . 'assets/js/sw.js' );
