@@ -66,11 +66,62 @@ jobs:
       - name: Check JavaScript syntax
         run: for f in abibitumi-chat/assets/js/*.js; do node --check "$f"; done
 
+  wordpress:
+    name: WordPress 6.9 / PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - '7.4'
+          - '8.3'
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl, json, mbstring, mysqli, openssl, xml
+          coverage: none
+
+      - name: Install test dependencies
+        run: composer install --working-dir=abibitumi-chat --no-interaction --prefer-dist --no-progress
+
+      - name: Install WordPress 6.9.4
+        run: |
+          curl -fsSL https://wordpress.org/wordpress-6.9.4.zip -o /tmp/wordpress.zip
+          unzip -q /tmp/wordpress.zip -d /tmp
+
+      - name: Run WordPress integration tests
+        run: composer test:integration --working-dir=abibitumi-chat
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+          WP_TEST_DB_HOST: 127.0.0.1
+          WP_TEST_DB_NAME: wordpress_test
+          WP_TEST_DB_PASSWORD: root
+          WP_TEST_DB_USER: root
+
   package:
     name: Installable plugin
     needs:
       - php
       - javascript
+      - wordpress
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository

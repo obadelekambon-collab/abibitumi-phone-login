@@ -11,6 +11,11 @@
 		"ext-openssl": "*",
 		"minishlink/web-push": "^7.0"
 	},
+	"require-dev": {
+		"phpunit/phpunit": "^9.6",
+		"wp-phpunit/wp-phpunit": "^6.9",
+		"yoast/phpunit-polyfills": "^1.1"
+	},
 	"config": {
 		"allow-plugins": false,
 		"optimize-autoloader": true,
@@ -18,5 +23,8 @@
 			"php": "7.4.33"
 		},
 		"sort-packages": true
+	},
+	"scripts": {
+		"test:integration": "phpunit -c tests/integration/phpunit.xml.dist"
 	}
 }

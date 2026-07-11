@@ -37,7 +37,12 @@ WordPress functions, so it runs anywhere PHP is installed — no database, no
 web server.
 
 The same checks run in GitHub Actions on PHP 7.4 and 8.3 plus Node 20 via
-`.github/workflows/abibitumi-chat-ci.yml`.
+`.github/workflows/abibitumi-chat-ci.yml`. Database-backed integration tests
+also load the plugin in WordPress 6.9.4 on PHP 7.4 and 8.3, create its custom
+tables, exercise persistence, inspect REST routes, and verify privacy/cron
+hooks. Run them locally with `composer test:integration` after providing the
+MySQL and `WP_CORE_DIR` environment variables documented in
+`tests/integration/wp-tests-config.php`.
 
 ## Conventions
 
@@ -66,7 +71,8 @@ The same checks run in GitHub Actions on PHP 7.4 and 8.3 plus Node 20 via
   can be raised.
 - Automated PHPUnit + WP test-suite harness alongside `tests/test-logic.php`.
 - Knowledge-base article suggestions for recurring questions.
-- Expand automated coverage with the WordPress integration test suite.
+- Expand integration coverage to the minimum supported WordPress release and
+  add browser-level widget/dashboard tests.
 
 ## Guardrails
 
