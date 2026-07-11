@@ -400,8 +400,8 @@
 		if ( stream ) { stream.close(); stream = null; }
 	}
 	function startStream() {
-		var url = D.restUrl + '/stream?token=' + encodeURIComponent( token ) +
-			'&conversation_id=' + encodeURIComponent( convo ) + '&after=' + encodeURIComponent( lastId );
+		var url = D.restUrl + '/stream?conversation_id=' + encodeURIComponent( convo ) +
+			'&after=' + encodeURIComponent( lastId );
 		stream = new EventSource( url, { withCredentials: true } );
 		stream.addEventListener( 'update', function ( event ) {
 			try { handleUpdate( JSON.parse( event.data ) ); } catch ( e ) {}

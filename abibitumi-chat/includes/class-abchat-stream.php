@@ -93,6 +93,7 @@ class ABChat_Stream {
 
 		header( 'Content-Type: text/event-stream; charset=utf-8' );
 		header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+		header( 'Referrer-Policy: no-referrer' );
 		header( 'X-Accel-Buffering: no' );
 		header( 'Connection: keep-alive' );
 

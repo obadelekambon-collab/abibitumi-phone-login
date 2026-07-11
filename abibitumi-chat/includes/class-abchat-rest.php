@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class ABChat_REST {
 
 	const NS = 'abchat/v1';
+	const VISITOR_COOKIE = 'abchat_session';
 
 	/**
 	 * Hook registration.
@@ -215,6 +216,9 @@ class ABChat_REST {
 		if ( ! $token ) {
 			$token = $req->get_param( 'token' );
 		}
+		if ( ! $token && ! empty( $_COOKIE[ self::VISITOR_COOKIE ] ) ) {
+			$token = wp_unslash( $_COOKIE[ self::VISITOR_COOKIE ] );
+		}
 		return $token ? sanitize_text_field( $token ) : '';
 	}
 
@@ -282,7 +286,7 @@ class ABChat_REST {
 			$visitor = ABChat_DB::get_or_create_visitor( $token, $data );
 		}
 
-		return new WP_REST_Response(
+		$response = new WP_REST_Response(
 			array(
 				'enabled' => true,
 				'token'   => $token,
@@ -296,6 +300,30 @@ class ABChat_REST {
 			),
 			200
 		);
+		$response->header( 'Set-Cookie', $this->visitor_cookie_header( $token ) );
+		return $response;
+	}
+
+	/**
+	 * Build the secure visitor-session cookie header used by EventSource.
+	 *
+	 * @param string $token Visitor token.
+	 * @return string
+	 */
+	protected function visitor_cookie_header( $token ) {
+		$path = wp_parse_url( rest_url( self::NS ), PHP_URL_PATH );
+		$path = $path ? trailingslashit( $path ) : '/';
+		$parts = array(
+			self::VISITOR_COOKIE . '=' . rawurlencode( $token ),
+			'Path=' . $path,
+			'Max-Age=' . ( 30 * DAY_IN_SECONDS ),
+			'HttpOnly',
+			'SameSite=Strict',
+		);
+		if ( is_ssl() ) {
+			$parts[] = 'Secure';
+		}
+		return implode( '; ', $parts );
 	}
 
 	/**

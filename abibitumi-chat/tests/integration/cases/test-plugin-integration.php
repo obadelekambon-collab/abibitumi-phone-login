@@ -235,4 +235,20 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 'Ordinary message', ABChat_Admin::csv_safe_cell( 'Ordinary message' ) );
 		$this->assertSame( '123', ABChat_Admin::csv_safe_cell( 123 ) );
 	}
+
+	/**
+	 * Visitor sessions issue an HTTP-only cookie for credential-free SSE URLs.
+	 */
+	public function test_session_issues_secure_stream_cookie() {
+		$_SERVER['REMOTE_ADDR'] = '192.0.2.70';
+		delete_transient( 'abchat_session_ip_' . md5( '192.0.2.70' ) );
+		$request  = new WP_REST_Request( 'POST', '/abchat/v1/session' );
+		$response = ( new ABChat_REST() )->session( $request );
+		$headers  = $response->get_headers();
+		$this->assertArrayHasKey( 'Set-Cookie', $headers );
+		$this->assertStringContainsString( ABChat_REST::VISITOR_COOKIE . '=', $headers['Set-Cookie'] );
+		$this->assertStringContainsString( 'HttpOnly', $headers['Set-Cookie'] );
+		$this->assertStringContainsString( 'SameSite=Strict', $headers['Set-Cookie'] );
+		$this->assertStringNotContainsString( 'token=', file_get_contents( ABCHAT_DIR . 'assets/js/widget.js' ) );
+	}
 }
