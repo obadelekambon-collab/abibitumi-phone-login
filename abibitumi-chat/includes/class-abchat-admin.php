@@ -131,6 +131,7 @@ class ABChat_Admin {
 				'pushEnabled' => (bool) ABChat_Settings::get( 'push_enabled' ),
 				'vapidPublic' => isset( ABChat_Notifications::vapid_keys()['publicKey'] ) ? ABChat_Notifications::vapid_keys()['publicKey'] : '',
 				'swUrl'       => esc_url_raw( home_url( '/abchat-sw.js' ) ),
+				'swScope'     => ABChat_PWA::scope_path(),
 				'openConvo'   => isset( $_GET['conversation'] ) ? (int) $_GET['conversation'] : 0, // phpcs:ignore WordPress.Security.NonceVerification
 				'exportUrl'   => esc_url_raw(
 					add_query_arg(

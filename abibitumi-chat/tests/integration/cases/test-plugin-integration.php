@@ -34,6 +34,16 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * PWA scope follows subdirectory WordPress home installations.
+	 */
+	public function test_pwa_scope_uses_home_path() {
+		$original = get_option( 'home' );
+		update_option( 'home', 'http://example.org/community' );
+		$this->assertSame( '/community/', ABChat_PWA::scope_path() );
+		update_option( 'home', $original );
+	}
+
+	/**
 	 * Visitor and operator REST endpoints are registered in WordPress.
 	 */
 	public function test_rest_routes_are_registered() {

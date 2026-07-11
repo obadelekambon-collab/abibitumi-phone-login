@@ -301,7 +301,7 @@
 			Notification.requestPermission();
 		}
 		if ( ! A.vapidPublic || ! ( 'serviceWorker' in navigator ) || ! ( 'PushManager' in window ) ) { return; }
-		navigator.serviceWorker.register( A.swUrl, { scope: '/' } ).then( function ( reg ) {
+		navigator.serviceWorker.register( A.swUrl, { scope: A.swScope || '/' } ).then( function ( reg ) {
 			return reg.pushManager.getSubscription().then( function ( sub ) {
 				if ( sub ) { return sub; }
 				return reg.pushManager.subscribe( {

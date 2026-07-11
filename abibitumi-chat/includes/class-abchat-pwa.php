@@ -1,7 +1,7 @@
 <?php
 /**
  * PWA support: serves a web app manifest and a service worker from the
- * site root (so the SW can control the whole origin), and injects the
+	 * site home path, and injects the
  * manifest link + theme-color meta tags.
  *
  * @package AbibitumiChat
@@ -66,15 +66,15 @@ class ABChat_PWA {
 	}
 
 	/**
-	 * Output the service worker JS (must be same-origin, root-scoped).
+	 * Output the same-origin service worker JavaScript.
 	 *
 	 * @return void
 	 */
 	protected function serve_service_worker() {
 		nocache_headers();
 		header( 'Content-Type: application/javascript; charset=utf-8' );
-		header( 'Service-Worker-Allowed: /' );
-		// The SW source lives in assets; stream it through so its scope is the root.
+		header( 'Service-Worker-Allowed: ' . self::scope_path() );
+		// Stream the source through the home path so it can control the PWA.
 		$file = ABCHAT_DIR . 'assets/js/sw.js';
 		if ( is_readable( $file ) ) {
 			echo file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions
@@ -98,7 +98,7 @@ class ABChat_PWA {
 			'short_name'       => ABChat_Settings::get( 'pwa_short_name' ),
 			'description'      => __( 'Live chat & support', 'abibitumi-chat' ),
 			'start_url'        => admin_url( 'admin.php?page=abchat&pwa=1' ),
-			'scope'            => '/',
+			'scope'            => self::scope_path(),
 			'display'          => 'standalone',
 			'orientation'      => 'portrait',
 			'background_color' => '#ffffff',
@@ -110,6 +110,16 @@ class ABChat_PWA {
 		);
 
 		echo wp_json_encode( $manifest );
+	}
+
+	/**
+	 * Path controlled by the chat service worker.
+	 *
+	 * @return string
+	 */
+	public static function scope_path() {
+		$path = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+		return $path ? trailingslashit( $path ) : '/';
 	}
 
 	/**

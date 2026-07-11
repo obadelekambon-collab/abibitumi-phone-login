@@ -529,7 +529,7 @@
 	/* ------------------------------------------------------------------ */
 	function registerSW() {
 		if ( D.pwa && D.pwa.enabled && 'serviceWorker' in navigator ) {
-			navigator.serviceWorker.register( D.pwa.swUrl, { scope: '/' } ).catch( function () {} );
+			navigator.serviceWorker.register( D.pwa.swUrl, { scope: D.pwa.swScope || '/' } ).catch( function () {} );
 		}
 	}
 

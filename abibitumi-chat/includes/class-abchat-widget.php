@@ -70,6 +70,7 @@ class ABChat_Widget {
 			'pwa'      => array(
 				'enabled' => (bool) ABChat_Settings::get( 'pwa_enabled' ),
 				'swUrl'   => esc_url_raw( home_url( '/abchat-sw.js' ) ),
+				'swScope' => ABChat_PWA::scope_path(),
 			),
 			'i18n'     => array(
 				'send'        => __( 'Send', 'abibitumi-chat' ),
