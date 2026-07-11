@@ -91,6 +91,9 @@ The CI matrix loads the plugin against a real WordPress 6.9.4 installation and
 MySQL database on both PHP 7.4 and 8.3. These integration tests verify schema
 activation, REST registration, chat persistence, privacy hooks, retention cron,
 and front-end secret isolation in addition to the standalone logic suite.
+Headless Chromium smoke tests execute the shipped visitor and operator bundles,
+covering widget startup, conversation/message interactions, dashboard list
+rendering, and hostile-text escaping at the browser boundary.
 
 ## Roles & capabilities
 - `abchat_agent` — operate the inbox (auto-granted to admin + editor).

@@ -66,6 +66,12 @@ jobs:
       - name: Check JavaScript syntax
         run: for f in abibitumi-chat/assets/js/*.js; do node --check "$f"; done
 
+      - name: Install browser test dependencies
+        run: npm ci --prefix abibitumi-chat/tests/browser
+
+      - name: Run Chromium UI smoke tests
+        run: npm test --prefix abibitumi-chat/tests/browser
+
   wordpress:
     name: WordPress 6.9 / PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
