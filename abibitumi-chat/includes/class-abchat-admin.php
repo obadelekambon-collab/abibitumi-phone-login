@@ -233,6 +233,8 @@ class ABChat_Admin {
 			'stream_enabled'      => $checkbox( 'stream_enabled' ),
 			'stream_duration'     => max( 10, min( 60, absint( isset( $in['stream_duration'] ) ? $in['stream_duration'] : 25 ) ) ),
 			'transcript_email'    => $checkbox( 'transcript_email' ),
+			'journey_tracking'    => $checkbox( 'journey_tracking' ),
+			'journey_limit'       => max( 5, min( 100, absint( isset( $in['journey_limit'] ) ? $in['journey_limit'] : 20 ) ) ),
 			'retention_enabled'   => $checkbox( 'retention_enabled' ),
 			'retention_days'      => max( 1, absint( isset( $in['retention_days'] ) ? $in['retention_days'] : 365 ) ),
 			'retention_batch'     => max( 10, min( 1000, absint( isset( $in['retention_batch'] ) ? $in['retention_batch'] : 100 ) ) ),

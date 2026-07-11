@@ -58,6 +58,7 @@ class ABChat_Activator {
 		$messages = ABChat_DB::table( 'messages' );
 		$canned   = ABChat_DB::table( 'canned' );
 		$push     = ABChat_DB::table( 'push' );
+		$views    = ABChat_DB::table( 'page_views' );
 
 		$sql = array();
 
@@ -137,6 +138,17 @@ class ABChat_Activator {
 			created_at DATETIME NULL,
 			PRIMARY KEY  (id),
 			KEY user_id (user_id)
+		) {$charset};";
+
+		$sql[] = "CREATE TABLE {$views} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			visitor_id BIGINT UNSIGNED NOT NULL,
+			url TEXT NULL,
+			title VARCHAR(255) DEFAULT '' NOT NULL,
+			viewed_at DATETIME NULL,
+			PRIMARY KEY  (id),
+			KEY visitor_id (visitor_id),
+			KEY viewed_at (viewed_at)
 		) {$charset};";
 
 		foreach ( $sql as $statement ) {

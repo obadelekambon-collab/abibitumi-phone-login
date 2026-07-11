@@ -20,7 +20,7 @@ settings.
 | **Chatbot** | Keyword flows, quick replies, knowledge-base article suggestions, auto-greeting, lead capture, human hand-off, office-hours away messages |
 | **Operator dashboard** | Three-pane inbox, open/pending/closed filters, search, assignment & transfer, internal notes, canned responses (`/shortcut`), visitor info panel, conversation CSV export |
 | **File sharing** | Images + documents both directions, size/type limits |
-| **Visitor tracking** | Online visitor list, current page, referrer, IP, device, registered-member detection |
+| **Visitor tracking** | Online visitor list, live current page, privacy-safe recent page journey, referrer, IP, device, registered-member detection |
 | **Ratings** | Post-chat 1–5 star satisfaction rating + comment |
 | **Analytics** | Conversations, resolved, messages, average rating, per-day chart |
 | **Privacy** | WordPress personal-data export and erasure for visitor profiles and transcripts |
@@ -30,6 +30,18 @@ settings.
 | **PWA** | Web app manifest + service worker, installable agent app, privacy-safe offline state, push notifications |
 | **Departments** | Multiple queues with routing |
 | **Office hours** | Weekly schedule, online/away status, away auto-reply |
+
+### Sales and onboarding page context
+
+When visitor journey tracking is enabled, the widget records same-site page
+changes while the visitor browses, including single-page-app navigation. Query
+strings and fragments are removed server-side before storage, off-site URLs are
+rejected, and only the configured bounded number of recent views is retained.
+Operators see the journey update in the visitor panel. The optional Gemini
+backend receives the five most recent safe page titles/URLs so it can suggest a
+relevant purchase or onboarding next step without guessing what the visitor
+has viewed. Journey data participates in WordPress privacy export, erasure, and
+retention cleanup.
 
 ## Architecture
 

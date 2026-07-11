@@ -13,7 +13,7 @@ test( 'visitor widget opens, creates a conversation, and sends text safely', asy
 				enabled: true, primaryColor: '#123456', textColor: '#ffffff', position: 'right',
 				brandName: 'Test Chat', welcomeTitle: 'Hello', welcomeSubtitle: 'Welcome', isOpen: true,
 				fileUploads: false, maxMessageLength: 120, prechat: { enabled: false }, departments: [],
-				botEnabled: false, soundEnabled: false, streamEnabled: false, pollInterval: 60
+				botEnabled: false, soundEnabled: false, streamEnabled: false, journeyTracking: true, pollInterval: 60
 			},
 			i18n: { send: 'Send', typeMessage: 'Type', startChat: 'Start', poweredBy: 'Powered', rateChat: 'Rate', thanks: 'Thanks', agentTyping: 'typing', attach: 'Attach', newMessages: 'New', online: 'Online', offline: 'Offline' }
 		};
@@ -35,6 +35,8 @@ test( 'visitor widget opens, creates a conversation, and sends text safely', asy
 	await expect( page.locator( '.abchat-bubble' ).last() ).toContainText( '<img src=x onerror=window.__xss=1>' );
 	await expect( page.locator( '.abchat-bubble img' ) ).toHaveCount( 0 );
 	await expect.poll( () => page.evaluate( () => window.__calls.some( call => call.url.endsWith( '/message' ) ) ) ).toBe( true );
+	await page.evaluate( () => { location.hash = 'membership-checkout'; } );
+	await expect.poll( () => page.evaluate( () => window.__calls.some( call => call.url.endsWith( '/page-view' ) ) ) ).toBe( true );
 } );
 
 test( 'operator dashboard renders hostile API text without executing markup', async ( { page } ) => {

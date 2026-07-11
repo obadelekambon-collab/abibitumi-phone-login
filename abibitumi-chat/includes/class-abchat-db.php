@@ -107,6 +107,71 @@ class ABChat_DB {
 		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET is_online = 0 WHERE last_seen < %s AND is_online = 1", $cutoff ) ); // phpcs:ignore WordPress.DB
 	}
 
+	/** Fetch a visitor by primary key. */
+	public static function get_visitor( $id ) {
+		global $wpdb;
+		$table = self::table( 'visitors' );
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", (int) $id ) ); // phpcs:ignore WordPress.DB
+	}
+
+	/** Strip sensitive URL data and reject off-site journey events. */
+	public static function journey_url( $url ) {
+		$url       = esc_url_raw( (string) $url );
+		$host      = wp_parse_url( $url, PHP_URL_HOST );
+		$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
+		if ( ! $url || ! $host || strtolower( $host ) !== strtolower( $site_host ) ) {
+			return '';
+		}
+		$scheme = wp_parse_url( $url, PHP_URL_SCHEME );
+		$path   = wp_parse_url( $url, PHP_URL_PATH );
+		return substr( $scheme . '://' . $host . ( $path ? $path : '/' ), 0, 2048 );
+	}
+
+	/** Record a deduplicated, bounded page view for an active visitor. */
+	public static function record_page_view( $visitor_id, $url, $title = '' ) {
+		global $wpdb;
+		$url = self::journey_url( $url );
+		if ( ! $url || ! ABChat_Settings::get( 'journey_tracking' ) ) {
+			return false;
+		}
+		$table = self::table( 'page_views' );
+		$last  = $wpdb->get_row( $wpdb->prepare( "SELECT url, viewed_at FROM {$table} WHERE visitor_id = %d ORDER BY id DESC LIMIT 1", (int) $visitor_id ) ); // phpcs:ignore WordPress.DB
+		if ( $last && $last->url === $url && strtotime( $last->viewed_at ) > current_time( 'timestamp' ) - 5 ) {
+			return false;
+		}
+		$ok = $wpdb->insert(
+			$table,
+			array(
+				'visitor_id' => (int) $visitor_id,
+				'url'        => $url,
+				'title'      => substr( sanitize_text_field( $title ), 0, 255 ),
+				'viewed_at'  => current_time( 'mysql' ),
+			)
+		); // phpcs:ignore WordPress.DB
+		if ( $ok ) {
+			self::update_visitor( $visitor_id, array( 'page_url' => $url, 'last_seen' => current_time( 'mysql' ), 'is_online' => 1 ) );
+			$limit = max( 5, min( 100, (int) ABChat_Settings::get( 'journey_limit', 20 ) ) );
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$table} WHERE visitor_id = %d AND id NOT IN (SELECT id FROM (SELECT id FROM {$table} WHERE visitor_id = %d ORDER BY id DESC LIMIT %d) recent_views)",
+					(int) $visitor_id,
+					(int) $visitor_id,
+					$limit
+				)
+			); // phpcs:ignore WordPress.DB
+		}
+		return (bool) $ok;
+	}
+
+	/** Return the visitor's recent journey in chronological order. */
+	public static function recent_page_views( $visitor_id, $limit = 20 ) {
+		global $wpdb;
+		$table = self::table( 'page_views' );
+		$limit = max( 1, min( 100, (int) $limit ) );
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT url, title, viewed_at FROM {$table} WHERE visitor_id = %d ORDER BY id DESC LIMIT %d", (int) $visitor_id, $limit ) ); // phpcs:ignore WordPress.DB
+		return array_reverse( (array) $rows );
+	}
+
 	/**
 	 * Locate a historical visitor imported from Tidio.
 	 *
@@ -273,6 +338,7 @@ class ABChat_DB {
 		$out      = array();
 
 		foreach ( (array) $rows as $visitor ) {
+			$visitor->page_views    = self::recent_page_views( $visitor->id, 100 );
 			$visitor->conversations = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$convos} WHERE visitor_id = %d ORDER BY id ASC", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
 			foreach ( (array) $visitor->conversations as $conversation ) {
 				$conversation->messages = self::get_messages( $conversation->id );
@@ -293,10 +359,12 @@ class ABChat_DB {
 		$visitors = self::table( 'visitors' );
 		$convos   = self::table( 'conversations' );
 		$messages = self::table( 'messages' );
+		$views    = self::table( 'page_views' );
 		$rows     = $wpdb->get_results( $wpdb->prepare( "SELECT id FROM {$visitors} WHERE email = %s", $email ) ); // phpcs:ignore WordPress.DB
 		$attachments = array();
 
 		foreach ( (array) $rows as $visitor ) {
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$views} WHERE visitor_id = %d", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
 			$conversation_ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$convos} WHERE visitor_id = %d", (int) $visitor->id ) ); // phpcs:ignore WordPress.DB
 			foreach ( (array) $conversation_ids as $conversation_id ) {
 				$urls        = $wpdb->get_col( $wpdb->prepare( "SELECT attachment_url FROM {$messages} WHERE conversation_id = %d AND attachment_url <> %s", (int) $conversation_id, '' ) ); // phpcs:ignore WordPress.DB
@@ -321,6 +389,7 @@ class ABChat_DB {
 		$visitors = self::table( 'visitors' );
 		$convos   = self::table( 'conversations' );
 		$messages = self::table( 'messages' );
+		$views    = self::table( 'page_views' );
 		$limit    = max( 1, min( 1000, (int) $limit ) );
 		$ids      = $wpdb->get_col(
 			$wpdb->prepare(
@@ -332,6 +401,7 @@ class ABChat_DB {
 		); // phpcs:ignore WordPress.DB
 
 		$result = array( 'conversations' => 0, 'messages' => 0, 'visitors' => 0, 'attachments' => array() );
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$views} WHERE viewed_at < %s", $cutoff ) ); // phpcs:ignore WordPress.DB
 		if ( $ids ) {
 			$ids          = array_map( 'intval', $ids );
 			$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
@@ -349,6 +419,15 @@ class ABChat_DB {
 			); // phpcs:ignore WordPress.DB
 		}
 
+		$orphan_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT id FROM {$visitors} WHERE last_seen < %s AND NOT EXISTS (SELECT 1 FROM {$convos} WHERE {$convos}.visitor_id = {$visitors}.id)",
+				$cutoff
+			)
+		); // phpcs:ignore WordPress.DB
+		foreach ( (array) $orphan_ids as $orphan_id ) {
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$views} WHERE visitor_id = %d", (int) $orphan_id ) ); // phpcs:ignore WordPress.DB
+		}
 		$result['visitors'] = (int) $wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM {$visitors} WHERE last_seen < %s AND NOT EXISTS (SELECT 1 FROM {$convos} WHERE {$convos}.visitor_id = {$visitors}.id)",

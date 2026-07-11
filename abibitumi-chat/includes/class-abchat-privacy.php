@@ -63,6 +63,10 @@ class ABChat_Privacy {
 
 		$data = array();
 		foreach ( ABChat_DB::privacy_records( sanitize_email( $email_address ) ) as $visitor ) {
+			$journey = array();
+			foreach ( (array) $visitor->page_views as $view ) {
+				$journey[] = sprintf( '[%1$s] %2$s (%3$s)', $view->viewed_at, $view->title, $view->url );
+			}
 			$data[] = array(
 				'group_id'    => 'abibitumi-chat',
 				'group_label' => __( 'Chat visitor profile', 'abibitumi-chat' ),
@@ -75,6 +79,7 @@ class ABChat_Privacy {
 					array( 'name' => __( 'User agent', 'abibitumi-chat' ), 'value' => $visitor->user_agent ),
 					array( 'name' => __( 'First seen', 'abibitumi-chat' ), 'value' => $visitor->first_seen ),
 					array( 'name' => __( 'Last seen', 'abibitumi-chat' ), 'value' => $visitor->last_seen ),
+					array( 'name' => __( 'Recent page journey', 'abibitumi-chat' ), 'value' => implode( "\n", $journey ) ),
 				),
 			);
 

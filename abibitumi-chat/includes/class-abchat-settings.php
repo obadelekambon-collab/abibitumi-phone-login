@@ -60,6 +60,8 @@ class ABChat_Settings {
 			'stream_enabled'     => 0, // Optional SSE; polling remains the fallback.
 			'stream_duration'    => 25, // seconds per SSE connection.
 			'transcript_email'   => 1, // email transcript to visitor on close.
+			'journey_tracking'   => 1, // Privacy-safe same-site page journey.
+			'journey_limit'      => 20,
 
 			// Data lifecycle.
 			'retention_enabled'  => 0,
@@ -249,6 +251,7 @@ class ABChat_Settings {
 			'offlineMessage'  => $s['offline_message'],
 			'pushEnabled'     => (bool) $s['push_enabled'],
 			'pwaEnabled'      => (bool) $s['pwa_enabled'],
+			'journeyTracking' => (bool) $s['journey_tracking'],
 		);
 	}
 

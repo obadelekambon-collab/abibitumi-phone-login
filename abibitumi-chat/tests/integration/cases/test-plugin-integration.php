@@ -18,7 +18,7 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 	 */
 	public function test_activation_creates_custom_tables() {
 		global $wpdb;
-		foreach ( array( 'visitors', 'conversations', 'messages', 'canned', 'push' ) as $name ) {
+		foreach ( array( 'visitors', 'conversations', 'messages', 'canned', 'push', 'page_views' ) as $name ) {
 			$table = ABChat_DB::table( $name );
 			$this->assertSame( $table, $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) );
 		}
@@ -51,6 +51,7 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		do_action( 'rest_api_init' );
 		$routes = rest_get_server()->get_routes();
 		$this->assertArrayHasKey( '/abchat/v1/session', $routes );
+		$this->assertArrayHasKey( '/abchat/v1/page-view', $routes );
 		$this->assertArrayHasKey( '/abchat/v1/bot', $routes );
 		$this->assertArrayHasKey( '/abchat/v1/stream', $routes );
 		$this->assertArrayHasKey( '/abchat/v1/agent/conversations', $routes );
@@ -77,6 +78,23 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 'support', $conversation->department );
 		$this->assertSame( $message_id, (int) $messages[0]->id );
 		$this->assertSame( 'Hello from WordPress.', $messages[0]->body );
+	}
+
+	/** Visitor journeys remain same-site, parameter-free, live, and bounded. */
+	public function test_visitor_page_journey_tracking() {
+		ABChat_Settings::update( array( 'journey_tracking' => 1, 'journey_limit' => 5 ) );
+		$visitor = ABChat_DB::get_or_create_visitor( 'journey-test-token' );
+		$request = new WP_REST_Request( 'POST', '/abchat/v1/page-view' );
+		$request->set_param( '_visitor', $visitor );
+		$request->set_param( 'url', home_url( '/membership/checkout/?email=private@example.com#payment' ) );
+		$request->set_param( 'title', 'Membership checkout' );
+		$response = ( new ABChat_REST() )->page_view( $request )->get_data();
+		$this->assertTrue( $response['stored'] );
+		$views = ABChat_DB::recent_page_views( $visitor->id, 20 );
+		$this->assertCount( 1, $views );
+		$this->assertSame( home_url( '/membership/checkout/' ), $views[0]->url );
+		$this->assertStringNotContainsString( 'private@example.com', $views[0]->url );
+		$this->assertSame( '', ABChat_DB::journey_url( 'https://attacker.example/track' ) );
 	}
 
 	/** Tidio migration persists closed history and deduplicates contacts/transcripts. */

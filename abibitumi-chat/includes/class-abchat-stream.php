@@ -155,8 +155,12 @@ class ABChat_Stream {
 		$conversation_id = (int) $request->get_param( 'conversation_id' );
 		$data            = array( 'counts' => ABChat_DB::conversation_counts() );
 		if ( $conversation_id ) {
+			$conversation = ABChat_DB::get_conversation( $conversation_id );
 			$data['messages']      = $this->shape_messages( ABChat_DB::get_messages( $conversation_id, (int) $request->get_param( 'after' ) ) );
 			$data['visitorTyping'] = ABChat_DB::is_typing( $conversation_id, 'visitor' );
+			if ( $conversation ) {
+				$data['visitor'] = ( new ABChat_REST() )->shape_visitor( ABChat_DB::get_visitor( $conversation->visitor_id ) );
+			}
 		}
 		return $data;
 	}

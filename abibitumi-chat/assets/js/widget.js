@@ -26,6 +26,7 @@
 	var seenIntro = false;
 	var humanJoined = false;
 	var audioCtx = null;
+	var lastTrackedUrl = '';
 
 	/* ------------------------------------------------------------------ */
 	/* Sound — short Web Audio beep (no binary asset required)            */
@@ -190,7 +191,7 @@
 	function startSession() {
 		return api( '/session', {
 			method: 'POST',
-			body: { token: token, page_url: location.href, referrer: document.referrer }
+			body: { token: token, page_url: location.href, page_title: document.title, referrer: document.referrer }
 		} ).then( function ( res ) {
 			if ( ! res.enabled ) { return; }
 			token   = res.token;
@@ -399,6 +400,19 @@
 		}
 	}
 
+	function trackPage() {
+		if ( ! CFG.journeyTracking || ! token || location.href === lastTrackedUrl ) { return; }
+		lastTrackedUrl = location.href;
+		api( '/page-view', { method: 'POST', body: { url: location.href, title: document.title } } ).catch( function () {} );
+	}
+
+	function watchJourney() {
+		lastTrackedUrl = location.href;
+		window.addEventListener( 'popstate', trackPage );
+		window.addEventListener( 'hashchange', trackPage );
+		setInterval( trackPage, 1000 );
+	}
+
 	function renderSuggestions( suggestions ) {
 		var wrap = el( 'div', 'abchat-quick abchat-suggestions' );
 		suggestions.forEach( function ( suggestion ) {
@@ -561,6 +575,7 @@
 		buildUI();
 		if ( ! root ) { return; }
 		startSession().then( function () {
+			watchJourney();
 			maybeGreet();
 			// Background poll for unread even when closed, at a slower cadence.
 			if ( convo ) {

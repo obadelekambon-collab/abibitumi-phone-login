@@ -5,7 +5,7 @@
  */
 error_reporting( E_ALL & ~E_DEPRECATED );
 define( 'ABSPATH', '/tmp/' );
-define( 'ABCHAT_VERSION', '1.0.0' );
+define( 'ABCHAT_VERSION', '1.1.0' );
 define( 'ABCHAT_AGENT_CAP', 'abchat_agent' );
 define( 'ABCHAT_DIR', dirname( __DIR__ ) . '/' );
 define( 'DAY_IN_SECONDS', 86400 );
@@ -73,6 +73,8 @@ class ABChat_Test_REST_Request {
 class ABChat_DB {
 	public static $messages = array();
 	public static $cleanup_calls = 0;
+	public static $test_conversation = null;
+	public static $test_journey = array();
 	public static function client_ip() { return isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : ''; }
 	public static function add_message( $d ) { self::$messages[] = $d; return count( self::$messages ); }
 	public static function update_conversation( $id, $d ) {}
@@ -86,6 +88,8 @@ class ABChat_DB {
 		return array( 'conversations' => 2, 'messages' => 5, 'visitors' => 1, 'attachments' => array() );
 	}
 	public static function find_imported_visitor( $email, $tidio_id ) { return null; }
+	public static function get_conversation( $id ) { return self::$test_conversation; }
+	public static function recent_page_views( $visitor_id, $limit = 20 ) { return array_slice( self::$test_journey, -$limit ); }
 }
 
 require __DIR__ . '/../includes/class-abchat-settings.php';
@@ -119,6 +123,7 @@ ok( $defaults['conversation_rate_limit'] === 10 && $defaults['conversation_rate_
 ok( $defaults['max_message_length'] === 5000, 'message length has a portable default' );
 ok( $defaults['stream_enabled'] === 0 && $defaults['stream_duration'] === 25, 'SSE transport is optional with a bounded default duration' );
 ok( $defaults['retention_enabled'] === 0 && $defaults['retention_days'] === 365, 'retention is opt-in with a one-year default policy' );
+ok( $defaults['journey_tracking'] === 1 && $defaults['journey_limit'] === 20, 'privacy-safe visitor journey tracking has bounded defaults' );
 
 echo "== PWA cache privacy ==\n";
 $service_worker = file_get_contents( ABCHAT_DIR . 'assets/js/sw.js' );
@@ -201,6 +206,15 @@ $ai = $gemini->filter_response( $rule, 'Question', 1 );
 ok( 'Gemini reply' === $ai['reply'] && false === $ai['handoff'], 'valid Gemini response overrides rule response' );
 ok( false !== strpos( $__remote_request['url'], 'gemini-2.5-flash:generateContent' ), 'configured Gemini model used in request' );
 ok( false === strpos( $__remote_request['url'], 'test-key' ) && 'test-key' === $__remote_request['args']['headers']['x-goog-api-key'], 'Gemini key sent in header instead of URL' );
+
+ABChat_DB::$test_conversation = (object) array( 'visitor_id' => 42 );
+ABChat_DB::$test_journey      = array( (object) array( 'title' => 'Membership checkout', 'url' => 'https://abibitumi.com/join/' ) );
+$gemini->filter_response( $rule, 'Which option is right?', 9 );
+$ai_request = json_decode( $__remote_request['args']['body'], true );
+ok( false !== strpos( $ai_request['system_instruction']['parts'][0]['text'], 'Membership checkout' ), 'Gemini receives recent visitor journey context' );
+ok( false === strpos( $ai_request['system_instruction']['parts'][0]['text'], '?' ), 'Gemini journey context contains no URL query parameters' );
+ABChat_DB::$test_conversation = null;
+ABChat_DB::$test_journey      = array();
 
 $__remote_response = array(
 	'response' => array( 'code' => 200 ),

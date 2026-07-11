@@ -384,6 +384,14 @@ $checkbox = function ( $name, $val, $label ) {
 			<h2><?php esc_html_e( 'Data retention', 'abibitumi-chat' ); ?></h2>
 			<table class="form-table" role="presentation">
 				<tr>
+					<th><?php esc_html_e( 'Visitor journey', 'abibitumi-chat' ); ?></th>
+					<td>
+						<?php $checkbox( 'journey_tracking', $s['journey_tracking'], __( 'Track privacy-safe page paths for sales and onboarding context', 'abibitumi-chat' ) ); ?>
+						<p class="description"><?php esc_html_e( 'Query strings and fragments are removed before storage. Cross-site URLs are rejected.', 'abibitumi-chat' ); ?></p>
+						<label><input name="journey_limit" type="number" min="5" max="100" value="<?php echo esc_attr( $s['journey_limit'] ); ?>"> <?php esc_html_e( 'recent page views retained per visitor', 'abibitumi-chat' ); ?></label>
+					</td>
+				</tr>
+				<tr>
 					<th><?php esc_html_e( 'Automatic cleanup', 'abibitumi-chat' ); ?></th>
 					<td>
 						<?php $checkbox( 'retention_enabled', $s['retention_enabled'], __( 'Delete expired closed conversations once per day', 'abibitumi-chat' ) ); ?>
