@@ -322,7 +322,7 @@ class ABChat_DB {
 	public static function conversation_counts() {
 		global $wpdb;
 		$c    = self::table( 'conversations' );
-		$rows = $wpdb->get_results( "SELECT status, COUNT(*) AS n FROM {$c} GROUP BY status" ); // phpcs:ignore WordPress.DB
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT status, COUNT(*) AS n FROM {$c} WHERE 1 = %d GROUP BY status", 1 ) ); // phpcs:ignore WordPress.DB
 		$out  = array( 'open' => 0, 'pending' => 0, 'closed' => 0 );
 		foreach ( (array) $rows as $r ) {
 			$out[ $r->status ] = (int) $r->n;
@@ -538,7 +538,7 @@ class ABChat_DB {
 		if ( $user_id ) {
 			return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE user_id = %d", (int) $user_id ) ); // phpcs:ignore WordPress.DB
 		}
-		return $wpdb->get_results( "SELECT * FROM {$t}" ); // phpcs:ignore WordPress.DB
+		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE 1 = %d", 1 ) ); // phpcs:ignore WordPress.DB
 	}
 
 	/**

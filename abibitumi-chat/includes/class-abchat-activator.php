@@ -144,7 +144,7 @@ class ABChat_Activator {
 		}
 
 		// Seed a couple of canned responses on first install.
-		$existing = $wpdb->get_var( "SELECT COUNT(*) FROM {$canned}" ); // phpcs:ignore WordPress.DB
+		$existing = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$canned} WHERE 1 = %d", 1 ) ); // phpcs:ignore WordPress.DB
 		if ( ! $existing ) {
 			ABChat_DB::save_canned( array( 'operator_id' => 0, 'shortcut' => '/hi', 'title' => 'Greeting', 'body' => 'Hello! Thanks for reaching out to us. How can I help you today?' ) );
 			ABChat_DB::save_canned( array( 'operator_id' => 0, 'shortcut' => '/thanks', 'title' => 'Thanks', 'body' => 'Thank you for contacting us. Is there anything else I can help with?' ) );

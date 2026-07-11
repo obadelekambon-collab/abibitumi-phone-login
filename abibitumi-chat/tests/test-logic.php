@@ -121,6 +121,19 @@ ok( false === strpos( $service_worker, '.put(' ), 'service worker never caches a
 ok( false !== strpos( $service_worker, "k.indexOf( ABCHAT_CACHE_PREFIX ) === 0" ), 'service worker deletes only its own legacy caches' );
 ok( false !== strpos( $service_worker, "'Cache-Control': 'no-store'" ), 'offline response explicitly forbids storage' );
 
+echo "== Database query guardrail ==\n";
+$query_files = glob( ABCHAT_DIR . 'includes/*.php' );
+$raw_reads   = array();
+foreach ( $query_files as $query_file ) {
+	$lines = file( $query_file );
+	foreach ( $lines as $line_number => $line ) {
+		if ( preg_match( '/\$wpdb->(?:get_var|get_row|get_results|get_col|query)\(\s*["\']/', $line ) ) {
+			$raw_reads[] = basename( $query_file ) . ':' . ( $line_number + 1 );
+		}
+	}
+}
+ok( array() === $raw_reads, 'all direct wpdb reads pass through prepare' );
+
 echo "== Office hours ==\n";
 // Disabled => always open.
 ABChat_Settings::update( array( 'office_hours_enabled' => 0 ) );

@@ -975,7 +975,7 @@ class ABChat_REST {
 		global $wpdb;
 		ABChat_DB::expire_visitors( 60 );
 		$t    = ABChat_DB::table( 'visitors' );
-		$rows = $wpdb->get_results( "SELECT * FROM {$t} WHERE is_online = 1 ORDER BY last_seen DESC LIMIT 100" ); // phpcs:ignore WordPress.DB
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE is_online = %d ORDER BY last_seen DESC LIMIT 100", 1 ) ); // phpcs:ignore WordPress.DB
 		return new WP_REST_Response( array( 'visitors' => array_map( array( $this, 'shape_visitor' ), $rows ) ), 200 );
 	}
 
