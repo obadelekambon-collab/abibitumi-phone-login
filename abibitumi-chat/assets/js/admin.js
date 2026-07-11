@@ -138,6 +138,7 @@
 				'<span class="abchat-badge-status abchat-st-' + esc( c.status ) + '">' + esc( c.status ) + '</span>' +
 			'</div>' +
 			'<div class="abchat-convo-actions">' +
+				( A.exportUrl ? '<a class="button" href="' + esc( A.exportUrl + '&conversation_id=' + c.id ) + '">Export CSV</a>' : '' ) +
 				'<select id="abchat-assign" title="Assign"></select>' +
 				( 'closed' === c.status
 					? '<button class="button" data-status="open">Reopen</button>'

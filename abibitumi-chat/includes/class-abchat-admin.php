@@ -23,6 +23,7 @@ class ABChat_Admin {
 		add_action( 'admin_post_abchat_apply_preset', array( $this, 'apply_preset' ) );
 		add_action( 'admin_post_abchat_export_settings', array( $this, 'export_settings' ) );
 		add_action( 'admin_post_abchat_import_settings', array( $this, 'import_settings' ) );
+		add_action( 'admin_post_abchat_export_conversation', array( $this, 'export_conversation' ) );
 		add_action( 'admin_bar_menu', array( $this, 'admin_bar' ), 100 );
 	}
 
@@ -130,6 +131,15 @@ class ABChat_Admin {
 				'vapidPublic' => isset( ABChat_Notifications::vapid_keys()['publicKey'] ) ? ABChat_Notifications::vapid_keys()['publicKey'] : '',
 				'swUrl'       => esc_url_raw( home_url( '/abchat-sw.js' ) ),
 				'openConvo'   => isset( $_GET['conversation'] ) ? (int) $_GET['conversation'] : 0, // phpcs:ignore WordPress.Security.NonceVerification
+				'exportUrl'   => esc_url_raw(
+					add_query_arg(
+						array(
+							'action'   => 'abchat_export_conversation',
+							'_wpnonce' => wp_create_nonce( 'abchat_export_conversation' ),
+						),
+						admin_url( 'admin-post.php' )
+					)
+				),
 			)
 		);
 	}
@@ -346,6 +356,55 @@ class ABChat_Admin {
 		$args = array( 'page' => 'abchat-settings' );
 		$args[ $ok ? 'imported' : 'error' ] = $ok ? '1' : 'import';
 		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Download one conversation and its messages as CSV.
+	 *
+	 * @return void
+	 */
+	public function export_conversation() {
+		if ( ! current_user_can( ABCHAT_AGENT_CAP ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'abibitumi-chat' ) );
+		}
+		check_admin_referer( 'abchat_export_conversation' );
+
+		$conversation_id = isset( $_GET['conversation_id'] ) ? absint( wp_unslash( $_GET['conversation_id'] ) ) : 0;
+		$conversation    = ABChat_DB::get_conversation( $conversation_id );
+		if ( ! $conversation ) {
+			wp_die( esc_html__( 'Conversation not found.', 'abibitumi-chat' ) );
+		}
+
+		$messages = ABChat_DB::get_messages( $conversation_id );
+		nocache_headers();
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="abibitumi-chat-conversation-' . $conversation_id . '.csv"' );
+
+		$output = fopen( 'php://output', 'w' ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+		if ( false === $output ) {
+			wp_die( esc_html__( 'Could not create export.', 'abibitumi-chat' ) );
+		}
+
+		fputcsv( $output, array( 'conversation_id', 'message_id', 'created_at', 'sender_type', 'sender_name', 'message_type', 'body', 'attachment_url', 'attachment_name', 'read_at' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+		foreach ( (array) $messages as $message ) {
+			fputcsv( // phpcs:ignore WordPress.WP.AlternativeFunctions
+				$output,
+				array(
+					$conversation_id,
+					(int) $message->id,
+					$message->created_at,
+					$message->sender_type,
+					$message->sender_name,
+					$message->type,
+					$message->body,
+					$message->attachment_url,
+					$message->attachment_name,
+					$message->read_at,
+				)
+			);
+		}
+		fclose( $output ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 		exit;
 	}
 }
