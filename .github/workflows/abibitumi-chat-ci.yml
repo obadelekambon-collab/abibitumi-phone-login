@@ -116,8 +116,9 @@ jobs:
         if: matrix.wordpress == '5.8.10'
         run: |
           composer create-project wp-phpunit/wp-phpunit /tmp/wp-phpunit 5.8.10 --no-interaction --prefer-dist --no-progress
-          mkdir -p /tmp/wp58-runner
-          composer require --working-dir=/tmp/wp58-runner phpunit/phpunit:7.5.20 --no-interaction --prefer-dist --no-progress
+          curl -fsSL https://phar.phpunit.de/phpunit-7.5.20.phar -o /tmp/phpunit-7.5.20.phar
+          curl -fsSL https://phar.phpunit.de/phpunit-7.5.20.phar.sha256 -o /tmp/phpunit-7.5.20.phar.sha256
+          cd /tmp && sha256sum --check phpunit-7.5.20.phar.sha256
 
       - name: Install WordPress ${{ matrix.wordpress }}
         run: |
@@ -136,7 +137,7 @@ jobs:
 
       - name: Run minimum WordPress integration tests
         if: matrix.wordpress == '5.8.10'
-        run: /tmp/wp58-runner/vendor/bin/phpunit -c abibitumi-chat/tests/integration/phpunit.xml.dist
+        run: php /tmp/phpunit-7.5.20.phar -c abibitumi-chat/tests/integration/phpunit.xml.dist
         env:
           WP_CORE_DIR: /tmp/wordpress
           WP_TESTS_FRAMEWORK_DIR: /tmp/wp-phpunit
