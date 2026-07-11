@@ -27,6 +27,9 @@ class ABChat_Activator {
 		// VAPID keys for Web Push are generated lazily by the notifications class.
 		ABChat_Retention::schedule();
 		update_option( 'abchat_db_version', ABCHAT_VERSION, false );
+		// Register root PWA endpoints before persisting the rewrite table.
+		$pwa = new ABChat_PWA();
+		$pwa->add_rewrites();
 		flush_rewrite_rules();
 	}
 
