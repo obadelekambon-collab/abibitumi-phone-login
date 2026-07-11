@@ -112,18 +112,20 @@ jobs:
       - name: Install test dependencies
         run: composer install --working-dir=abibitumi-chat --no-interaction --prefer-dist --no-progress
 
+      - name: Install WordPress 5.8 test framework
+        if: matrix.wordpress == '5.8.10'
+        run: composer create-project wp-phpunit/wp-phpunit /tmp/wp-phpunit 5.8.10 --no-interaction --prefer-dist --no-progress
+
       - name: Install WordPress ${{ matrix.wordpress }}
         run: |
           curl -fsSL https://wordpress.org/wordpress-${{ matrix.wordpress }}.zip -o /tmp/wordpress.zip
           unzip -q /tmp/wordpress.zip -d /tmp
-          if [ ! -e /tmp/wordpress/wp-includes/class-wpdb.php ]; then
-            ln -s wp-db.php /tmp/wordpress/wp-includes/class-wpdb.php
-          fi
 
       - name: Run WordPress integration tests
         run: composer test:integration --working-dir=abibitumi-chat
         env:
           WP_CORE_DIR: /tmp/wordpress
+          WP_TESTS_FRAMEWORK_DIR: ${{ matrix.wordpress == '5.8.10' && '/tmp/wp-phpunit' || '' }}
           WP_TEST_DB_HOST: 127.0.0.1
           WP_TEST_DB_NAME: wordpress_test
           WP_TEST_DB_PASSWORD: root
