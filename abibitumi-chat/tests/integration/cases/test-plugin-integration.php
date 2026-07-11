@@ -79,4 +79,21 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'gemini_api_key', $config );
 		$this->assertStringNotContainsString( 'integration-secret', wp_json_encode( $config ) );
 	}
+
+	/**
+	 * Anonymous visitor session creation is bounded by client IP.
+	 */
+	public function test_new_visitor_session_rate_limit() {
+		$_SERVER['REMOTE_ADDR'] = '192.0.2.31';
+		ABChat_Settings::update( array( 'session_rate_limit' => 2, 'session_rate_window' => 60 ) );
+		delete_transient( 'abchat_session_ip_' . md5( '192.0.2.31' ) );
+		$rest = new ABChat_REST();
+
+		$this->assertFalse( $rest->check_session_rate_limit() );
+		$this->assertFalse( $rest->check_session_rate_limit() );
+		$limited = $rest->check_session_rate_limit();
+		$this->assertWPError( $limited );
+		$this->assertSame( 'abchat_session_rate_limited', $limited->get_error_code() );
+		$this->assertSame( 429, $limited->get_error_data()['status'] );
+	}
 }

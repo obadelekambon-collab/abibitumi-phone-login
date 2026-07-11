@@ -240,7 +240,7 @@ class ABChat_REST {
 	 * Initialise or refresh a visitor session.
 	 *
 	 * @param WP_REST_Request $req Request.
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response|WP_Error
 	 */
 	public function session( $req ) {
 		if ( ! ABChat_Settings::get( 'enabled' ) ) {
@@ -261,6 +261,10 @@ class ABChat_REST {
 		}
 
 		if ( empty( $visitor ) ) {
+			$limited = $this->check_session_rate_limit( $req );
+			if ( is_wp_error( $limited ) ) {
+				return $limited;
+			}
 			$token   = wp_generate_password( 40, false, false );
 			$visitor = ABChat_DB::get_or_create_visitor( $token, $data );
 		}
@@ -501,6 +505,34 @@ class ABChat_REST {
 	}
 
 	/**
+	 * Consume the per-IP new-session rate-limit bucket.
+	 *
+	 * @param WP_REST_Request|null $request Current request.
+	 * @return false|WP_Error
+	 */
+	public function check_session_rate_limit( $request = null ) {
+		$ip = ABChat_DB::client_ip();
+		if ( '' === $ip ) {
+			return false;
+		}
+		$key = 'abchat_session_ip_' . md5( $ip );
+		/**
+		 * Filter the session rate-limit key for custom trusted-proxy setups.
+		 *
+		 * @param string               $key     Transient key.
+		 * @param string               $ip      Resolved client IP.
+		 * @param WP_REST_Request|null $request Current request.
+		 */
+		$key = apply_filters( 'abchat_session_rate_limit_key', $key, $ip, $request );
+		return $this->consume_rate_limit(
+			$key,
+			max( 1, (int) ABChat_Settings::get( 'session_rate_limit', 30 ) ),
+			max( 60, (int) ABChat_Settings::get( 'session_rate_window', 3600 ) ),
+			'abchat_session_rate_limited'
+		);
+	}
+
+	/**
 	 * Consume the visitor and IP bot rate-limit buckets.
 	 *
 	 * @param object $visitor Visitor row.
@@ -532,26 +564,41 @@ class ABChat_REST {
 				continue;
 			}
 
-			$key   = sanitize_key( $bucket[0] );
-			$max   = max( 1, (int) $bucket[1] );
-			$state = get_transient( $key );
-			if ( ! is_array( $state ) || empty( $state['reset'] ) || (int) $state['reset'] <= time() ) {
-				$state = array( 'count' => 0, 'reset' => time() + $window );
+			$limited = $this->consume_rate_limit( $bucket[0], $bucket[1], $window, 'abchat_bot_rate_limited' );
+			if ( is_wp_error( $limited ) ) {
+				return $limited;
 			}
-
-			if ( (int) $state['count'] >= $max ) {
-				$retry_after = max( 1, (int) $state['reset'] - time() );
-				return new WP_Error(
-					'abchat_bot_rate_limited',
-					__( 'Too many chatbot requests. Please wait and try again.', 'abibitumi-chat' ),
-					array( 'status' => 429, 'retry_after' => $retry_after )
-				);
-			}
-
-			$state['count']++;
-			set_transient( $key, $state, max( 1, (int) $state['reset'] - time() ) );
 		}
 
+		return false;
+	}
+
+	/**
+	 * Consume one fixed-window transient rate-limit bucket.
+	 *
+	 * @param string $key     Transient key.
+	 * @param int    $max     Maximum requests.
+	 * @param int    $window  Window in seconds.
+	 * @param string $code    REST error code.
+	 * @return false|WP_Error
+	 */
+	protected function consume_rate_limit( $key, $max, $window, $code ) {
+		$key    = sanitize_key( $key );
+		$max    = max( 1, (int) $max );
+		$window = max( 1, (int) $window );
+		$state  = get_transient( $key );
+		if ( ! is_array( $state ) || empty( $state['reset'] ) || (int) $state['reset'] <= time() ) {
+			$state = array( 'count' => 0, 'reset' => time() + $window );
+		}
+		if ( (int) $state['count'] >= $max ) {
+			return new WP_Error(
+				$code,
+				__( 'Too many requests. Please wait and try again.', 'abibitumi-chat' ),
+				array( 'status' => 429, 'retry_after' => max( 1, (int) $state['reset'] - time() ) )
+			);
+		}
+		$state['count']++;
+		set_transient( $key, $state, max( 1, (int) $state['reset'] - time() ) );
 		return false;
 	}
 

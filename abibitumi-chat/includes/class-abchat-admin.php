@@ -224,6 +224,8 @@ class ABChat_Admin {
 			'retention_enabled'   => $checkbox( 'retention_enabled' ),
 			'retention_days'      => max( 1, absint( isset( $in['retention_days'] ) ? $in['retention_days'] : 365 ) ),
 			'retention_batch'     => max( 10, min( 1000, absint( isset( $in['retention_batch'] ) ? $in['retention_batch'] : 100 ) ) ),
+			'session_rate_limit'  => max( 1, absint( isset( $in['session_rate_limit'] ) ? $in['session_rate_limit'] : 30 ) ),
+			'session_rate_window' => max( 60, absint( isset( $in['session_rate_window'] ) ? $in['session_rate_window'] : 3600 ) ),
 			'office_hours_enabled'=> $checkbox( 'office_hours_enabled' ),
 			'offline_message'     => sanitize_textarea_field( isset( $in['offline_message'] ) ? $in['offline_message'] : '' ),
 			'bot_enabled'         => $checkbox( 'bot_enabled' ),

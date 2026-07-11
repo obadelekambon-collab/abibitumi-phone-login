@@ -65,6 +65,10 @@ class ABChat_Settings {
 			'retention_days'     => 365,
 			'retention_batch'    => 100,
 
+			// Abuse protection.
+			'session_rate_limit' => 30,
+			'session_rate_window' => 3600,
+
 			// Office hours (24h, site timezone). Empty = always open.
 			'office_hours_enabled' => 0,
 			'office_hours'         => self::default_hours(),

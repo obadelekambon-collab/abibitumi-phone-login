@@ -70,6 +70,7 @@ class ABChat_Test_REST_Request {
 class ABChat_DB {
 	public static $messages = array();
 	public static $cleanup_calls = 0;
+	public static function client_ip() { return isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : ''; }
 	public static function add_message( $d ) { self::$messages[] = $d; return count( self::$messages ); }
 	public static function update_conversation( $id, $d ) {}
 	public static function privacy_records( $email ) { return array(); }
@@ -107,6 +108,7 @@ ok( $defaults['primary_color'] === '#0b7d3e', 'brand green default' );
 ok( $defaults['bot_ai_enabled'] === 0, 'Gemini disabled by default' );
 ok( $defaults['gemini_model'] === 'gemini-2.5-flash', 'Gemini model has a portable default' );
 ok( $defaults['bot_rate_limit'] === 10 && $defaults['bot_rate_window'] === 60, 'bot rate limit has portable defaults' );
+ok( $defaults['session_rate_limit'] === 30 && $defaults['session_rate_window'] === 3600, 'new-session rate limit has portable defaults' );
 ok( $defaults['stream_enabled'] === 0 && $defaults['stream_duration'] === 25, 'SSE transport is optional with a bounded default duration' );
 ok( $defaults['retention_enabled'] === 0 && $defaults['retention_days'] === 365, 'retention is opt-in with a one-year default policy' );
 
@@ -203,6 +205,16 @@ for ( $i = 1; $i <= 10; $i++ ) {
 	}
 }
 ok( 10 === $i && is_wp_error( $limited ), 'IP bucket blocks new-session visitor rotation' );
+
+echo "== New visitor session rate limit ==\n";
+$__transients             = array();
+$_SERVER['REMOTE_ADDR']   = '192.0.2.30';
+ABChat_Settings::update( array( 'session_rate_limit' => 2, 'session_rate_window' => 60 ) );
+ok( false === $rest->check_session_rate_limit(), 'first new visitor session allowed' );
+ok( false === $rest->check_session_rate_limit(), 'new visitor session at IP limit allowed' );
+$limited = $rest->check_session_rate_limit();
+ok( is_wp_error( $limited ) && 'abchat_session_rate_limited' === $limited->get_error_code(), 'new visitor session above IP limit rejected' );
+ok( 429 === $limited->get_error_data()['status'] && $limited->get_error_data()['retry_after'] > 0, 'session limit includes REST status and retry timing' );
 
 echo "== SSE authorization guards ==\n";
 ABChat_Settings::update( array( 'stream_enabled' => 1 ) );
