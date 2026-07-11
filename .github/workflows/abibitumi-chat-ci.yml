@@ -116,6 +116,9 @@ jobs:
         run: |
           curl -fsSL https://wordpress.org/wordpress-${{ matrix.wordpress }}.zip -o /tmp/wordpress.zip
           unzip -q /tmp/wordpress.zip -d /tmp
+          if [ ! -e /tmp/wordpress/wp-includes/class-wpdb.php ]; then
+            ln -s wp-db.php /tmp/wordpress/wp-includes/class-wpdb.php
+          fi
 
       - name: Run WordPress integration tests
         run: composer test:integration --working-dir=abibitumi-chat
