@@ -21,7 +21,7 @@ class ABChat_Activator {
 		self::add_caps();
 
 		if ( false === get_option( ABChat_Settings::OPTION_KEY ) ) {
-			update_option( ABChat_Settings::OPTION_KEY, ABChat_Settings::defaults(), false );
+			add_option( ABChat_Settings::OPTION_KEY, ABChat_Settings::database_safe( ABChat_Settings::defaults() ), '', false );
 		}
 
 		// VAPID keys for Web Push are generated lazily by the notifications class.
