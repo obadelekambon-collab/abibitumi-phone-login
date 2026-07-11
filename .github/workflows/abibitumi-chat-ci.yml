@@ -73,14 +73,18 @@ jobs:
         run: npm test --prefix abibitumi-chat/tests/browser
 
   wordpress:
-    name: WordPress 6.9 / PHP ${{ matrix.php }}
+    name: WordPress ${{ matrix.wordpress }} / PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        php:
-          - '7.4'
-          - '8.3'
+        include:
+          - wordpress: '5.8.10'
+            php: '7.4'
+          - wordpress: '6.9.4'
+            php: '7.4'
+          - wordpress: '6.9.4'
+            php: '8.3'
     services:
       mysql:
         image: mysql:8.0
@@ -108,9 +112,9 @@ jobs:
       - name: Install test dependencies
         run: composer install --working-dir=abibitumi-chat --no-interaction --prefer-dist --no-progress
 
-      - name: Install WordPress 6.9.4
+      - name: Install WordPress ${{ matrix.wordpress }}
         run: |
-          curl -fsSL https://wordpress.org/wordpress-6.9.4.zip -o /tmp/wordpress.zip
+          curl -fsSL https://wordpress.org/wordpress-${{ matrix.wordpress }}.zip -o /tmp/wordpress.zip
           unzip -q /tmp/wordpress.zip -d /tmp
 
       - name: Run WordPress integration tests

@@ -87,10 +87,11 @@ release line when the plugin's minimum PHP version can be raised.
 GitHub Actions also produces an **abibitumi-chat** artifact containing an
 installable plugin ZIP with production dependencies included.
 
-The CI matrix loads the plugin against a real WordPress 6.9.4 installation and
-MySQL database on both PHP 7.4 and 8.3. These integration tests verify schema
-activation, REST registration, chat persistence, privacy hooks, retention cron,
-and front-end secret isolation in addition to the standalone logic suite.
+The CI matrix loads the plugin against the declared minimum WordPress 5.8 line
+on PHP 7.4 and WordPress 6.9.4 on both PHP 7.4 and 8.3, each with a real MySQL
+database. These integration tests verify schema activation, REST registration,
+chat persistence, privacy hooks, retention cron, and front-end secret isolation
+in addition to the standalone logic suite.
 Headless Chromium smoke tests execute the shipped visitor and operator bundles,
 covering widget startup, conversation/message interactions, dashboard list
 rendering, and hostile-text escaping at the browser boundary.
