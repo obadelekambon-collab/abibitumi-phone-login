@@ -68,6 +68,8 @@ class ABChat_Settings {
 			// Abuse protection.
 			'session_rate_limit' => 30,
 			'session_rate_window' => 3600,
+			'message_rate_limit' => 30,
+			'message_rate_window' => 60,
 
 			// Office hours (24h, site timezone). Empty = always open.
 			'office_hours_enabled' => 0,

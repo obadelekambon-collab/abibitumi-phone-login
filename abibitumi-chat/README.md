@@ -25,7 +25,7 @@ settings.
 | **Analytics** | Conversations, resolved, messages, average rating, per-day chart |
 | **Privacy** | WordPress personal-data export and erasure for visitor profiles and transcripts |
 | **Data retention** | Optional daily deletion of expired closed chats, orphan visitors, and local attachments |
-| **Abuse protection** | Configurable per-IP limits for new visitor sessions and chatbot requests |
+| **Abuse protection** | Configurable visitor and per-IP limits for sessions, messages, and chatbot requests |
 | **Notifications** | Agent email on new chat / offline lead / hand-off, visitor transcript email on close, browser notifications, Web Push |
 | **PWA** | Web app manifest + service worker, installable agent app, offline shell, push notifications |
 | **Departments** | Multiple queues with routing |

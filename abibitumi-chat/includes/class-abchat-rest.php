@@ -381,6 +381,10 @@ class ABChat_REST {
 		if ( is_wp_error( $convo ) ) {
 			return $convo;
 		}
+		$limited = $this->check_message_rate_limit( $visitor );
+		if ( is_wp_error( $limited ) ) {
+			return $limited;
+		}
 
 		$body = trim( (string) $req->get_param( 'body' ) );
 		if ( '' === $body ) {
@@ -580,6 +584,39 @@ class ABChat_REST {
 			}
 		}
 
+		return false;
+	}
+
+	/**
+	 * Consume visitor and IP buckets for ordinary visitor messages.
+	 *
+	 * @param object $visitor Visitor row.
+	 * @return false|WP_Error
+	 */
+	public function check_message_rate_limit( $visitor ) {
+		$limit  = max( 1, (int) ABChat_Settings::get( 'message_rate_limit', 30 ) );
+		$window = max( 10, (int) ABChat_Settings::get( 'message_rate_window', 60 ) );
+		$keys   = array( array( 'abchat_message_v_' . (int) $visitor->id, $limit ) );
+		if ( ! empty( $visitor->ip ) ) {
+			$keys[] = array( 'abchat_message_ip_' . md5( (string) $visitor->ip ), $limit * 3 );
+		}
+		/**
+		 * Filter visitor message rate-limit buckets.
+		 *
+		 * @param array  $keys    Array of { transient key, limit } pairs.
+		 * @param object $visitor Visitor row.
+		 * @param int    $window  Window length in seconds.
+		 */
+		$keys = apply_filters( 'abchat_message_rate_limit_keys', $keys, $visitor, $window );
+		foreach ( (array) $keys as $bucket ) {
+			if ( ! is_array( $bucket ) || count( $bucket ) < 2 ) {
+				continue;
+			}
+			$limited = $this->consume_rate_limit( $bucket[0], $bucket[1], $window, 'abchat_message_rate_limited' );
+			if ( is_wp_error( $limited ) ) {
+				return $limited;
+			}
+		}
 		return false;
 	}
 
