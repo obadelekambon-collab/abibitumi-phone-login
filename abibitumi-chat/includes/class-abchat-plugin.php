@@ -68,6 +68,13 @@ class ABChat_Plugin {
 	public $privacy;
 
 	/**
+	 * Closed-browser Web Push delivery adapter.
+	 *
+	 * @var ABChat_Web_Push
+	 */
+	public $web_push;
+
+	/**
 	 * Boot.
 	 */
 	public function __construct() {
@@ -81,6 +88,7 @@ class ABChat_Plugin {
 		$this->gemini        = new ABChat_Gemini();
 		$this->stream        = new ABChat_Stream();
 		$this->privacy       = new ABChat_Privacy();
+		$this->web_push      = new ABChat_Web_Push();
 
 		$this->rest->init();
 		$this->widget->init();
@@ -89,6 +97,7 @@ class ABChat_Plugin {
 		$this->gemini->init();
 		$this->stream->init();
 		$this->privacy->init();
+		$this->web_push->init();
 
 		if ( is_admin() ) {
 			$this->admin->init();

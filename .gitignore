@@ -16,3 +16,4 @@ Thumbs.db
 # Node (build tools)
 node_modules/
 dist/
+abibitumi-chat/vendor/

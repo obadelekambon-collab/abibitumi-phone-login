@@ -10,6 +10,11 @@ define( 'ABCHAT_AGENT_CAP', 'abchat_agent' );
 define( 'ABCHAT_DIR', dirname( __DIR__ ) . '/' );
 define( 'DAY_IN_SECONDS', 86400 );
 
+$autoload = dirname( __DIR__ ) . '/vendor/autoload.php';
+if ( is_readable( $autoload ) ) {
+	require $autoload;
+}
+
 $__options = array();
 $__transients = array();
 
@@ -66,6 +71,7 @@ class ABChat_DB {
 	public static function update_conversation( $id, $d ) {}
 	public static function privacy_records( $email ) { return array(); }
 	public static function erase_privacy_records( $email ) { return 'person@example.com' === $email ? 1 : 0; }
+	public static function delete_push_by_endpoint( $endpoint ) {}
 }
 
 require __DIR__ . '/../includes/class-abchat-settings.php';
@@ -74,6 +80,7 @@ require __DIR__ . '/../includes/class-abchat-gemini.php';
 require __DIR__ . '/../includes/class-abchat-rest.php';
 require __DIR__ . '/../includes/class-abchat-stream.php';
 require __DIR__ . '/../includes/class-abchat-privacy.php';
+require __DIR__ . '/../includes/class-abchat-web-push.php';
 
 $pass = 0; $fail = 0;
 function ok( $cond, $label ) {
@@ -204,6 +211,10 @@ $export = $privacy->export( 'person@example.com' );
 ok( true === $export['done'] && array() === $export['data'], 'privacy exporter completes cleanly without matching records' );
 $erased = $privacy->erase( 'person@example.com' );
 ok( true === $erased['items_removed'] && true === $erased['done'], 'privacy eraser reports removed records' );
+
+echo "== Web Push adapter ==\n";
+$dependency_loaded = class_exists( '\\Minishlink\\WebPush\\WebPush' );
+ok( $dependency_loaded === ABChat_Web_Push::is_available(), 'Web Push adapter availability follows Composer dependency' );
 
 echo "== VAPID key generation ==\n";
 require __DIR__ . '/../includes/class-abchat-notifications.php';

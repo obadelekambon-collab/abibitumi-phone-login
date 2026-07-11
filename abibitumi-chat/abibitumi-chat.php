@@ -26,6 +26,11 @@ define( 'ABCHAT_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ABCHAT_URL', plugin_dir_url( __FILE__ ) );
 define( 'ABCHAT_BASENAME', plugin_basename( __FILE__ ) );
 
+$abchat_autoload = ABCHAT_DIR . 'vendor/autoload.php';
+if ( is_readable( $abchat_autoload ) ) {
+	require_once $abchat_autoload;
+}
+
 // Capability required to operate the agent dashboard.
 if ( ! defined( 'ABCHAT_AGENT_CAP' ) ) {
 	define( 'ABCHAT_AGENT_CAP', 'abchat_agent' );
@@ -40,6 +45,7 @@ require_once ABCHAT_DIR . 'includes/class-abchat-stream.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-chatbot.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-gemini.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-notifications.php';
+require_once ABCHAT_DIR . 'includes/class-abchat-web-push.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-privacy.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-widget.php';
 require_once ABCHAT_DIR . 'includes/class-abchat-admin.php';

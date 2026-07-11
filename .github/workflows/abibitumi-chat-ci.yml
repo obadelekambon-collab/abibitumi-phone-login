@@ -39,6 +39,15 @@ jobs:
       - name: Lint PHP
         run: find abibitumi-chat -name '*.php' -print0 | xargs -0 -n1 php -l
 
+      - name: Validate Composer metadata
+        run: composer validate --working-dir=abibitumi-chat --strict
+
+      - name: Install backend dependencies
+        run: composer install --working-dir=abibitumi-chat --no-interaction --prefer-dist --no-progress --no-dev
+
+      - name: Audit backend dependencies
+        run: composer audit --working-dir=abibitumi-chat --no-interaction --abandoned=report
+
       - name: Run logic tests
         run: php abibitumi-chat/tests/test-logic.php
 
@@ -56,3 +65,33 @@ jobs:
 
       - name: Check JavaScript syntax
         run: for f in abibitumi-chat/assets/js/*.js; do node --check "$f"; done
+
+  package:
+    name: Installable plugin
+    needs:
+      - php
+      - javascript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          extensions: curl, json, mbstring, openssl
+          coverage: none
+
+      - name: Install production dependencies
+        run: composer install --working-dir=abibitumi-chat --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
+
+      - name: Build plugin ZIP
+        run: zip -qr abibitumi-chat.zip abibitumi-chat -x 'abibitumi-chat/tests/*'
+
+      - name: Upload plugin ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: abibitumi-chat
+          path: abibitumi-chat.zip
+          if-no-files-found: error

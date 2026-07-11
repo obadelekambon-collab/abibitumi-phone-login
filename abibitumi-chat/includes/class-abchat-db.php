@@ -489,6 +489,18 @@ class ABChat_DB {
 		return $wpdb->get_results( "SELECT * FROM {$t}" ); // phpcs:ignore WordPress.DB
 	}
 
+	/**
+	 * Remove a push subscription by endpoint.
+	 *
+	 * @param string $endpoint Push service endpoint.
+	 * @return void
+	 */
+	public static function delete_push_by_endpoint( $endpoint ) {
+		global $wpdb;
+		$t = self::table( 'push' );
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$t} WHERE endpoint = %s", $endpoint ) ); // phpcs:ignore WordPress.DB
+	}
+
 	/* --------------------------------------------------------------------- */
 	/* Analytics                                                             */
 	/* --------------------------------------------------------------------- */

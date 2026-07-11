@@ -68,12 +68,22 @@ the dashboard is closed.
 
 ## Installation
 1. Copy the `abibitumi-chat` folder into `wp-content/plugins/`.
-2. Activate **Abibitumi Chat** in *Plugins*.
-3. Go to **Chat → Settings** to set branding, colours, office hours, bot flows.
-4. Assign the **Chat Operator** role (or the `abchat_agent` capability) to
+2. Run `composer install --no-dev --optimize-autoloader` inside the plugin
+   directory to enable closed-browser Web Push delivery.
+3. Activate **Abibitumi Chat** in *Plugins*.
+4. Go to **Chat → Settings** to set branding, colours, office hours, bot flows.
+5. Assign the **Chat Operator** role (or the `abchat_agent` capability) to
    support staff. Administrators and editors get it automatically.
-5. Agents work from **Chat → Inbox**. On mobile, "Add to Home Screen" installs
+6. Agents work from **Chat → Inbox**. On mobile, "Add to Home Screen" installs
    the PWA.
+
+The PHP 7.4-compatible Web Push v7 dependency line is locked for reproducible
+installs. Composer currently reports legacy abandoned JWT subpackages on that
+line but no known security advisories. Upgrade to the maintained Web Push
+release line when the plugin's minimum PHP version can be raised.
+
+GitHub Actions also produces an **abibitumi-chat** artifact containing an
+installable plugin ZIP with production dependencies included.
 
 ## Roles & capabilities
 - `abchat_agent` — operate the inbox (auto-granted to admin + editor).
@@ -119,9 +129,10 @@ Exceeded requests receive HTTP `429` with retry timing.
 - `abchat_bot_response` (filter) — return a string or
   `{ reply, quickReplies, handoff }` to swap the rule engine for an LLM.
 - `abchat_should_load_widget` (filter) — control where the widget appears.
-- `abchat_dispatch_push` (action) — attach a VAPID signing library
-  (e.g. `minishlink/web-push`) to deliver push to closed browsers. A P-256
-  VAPID key pair is generated automatically when OpenSSL is available.
+- `abchat_dispatch_push` (action) — receives push subscriptions and payloads.
+  The Composer integration delivers them through `minishlink/web-push`;
+  custom delivery can attach to the same action. Expired subscriptions are
+  removed automatically.
 - Actions: `abchat_conversation_started`, `abchat_visitor_message`,
   `abchat_operator_message`, `abchat_bot_handoff`, `abchat_conversation_closed`.
 

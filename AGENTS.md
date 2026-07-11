@@ -61,8 +61,9 @@ The same checks run in GitHub Actions on PHP 7.4 and 8.3 plus Node 20 via
 - Optional AI backend for the chatbot behind `abchat_bot_response` (see
   "Chatbot AI backend" in `abibitumi-chat/README.md`).
 - WebSocket/SSE transport as an alternative to REST polling.
-- `minishlink/web-push` integration on the `abchat_dispatch_push` action for
-  real push to closed browsers.
+- Keep the `minishlink/web-push` adapter and its PHP 7.4-compatible lockfile
+  current; move to the maintained release line when the minimum PHP version
+  can be raised.
 - Automated PHPUnit + WP test-suite harness alongside `tests/test-logic.php`.
 - Conversation export (CSV), GDPR erase hooks, and a knowledge-base article
   suggester.
