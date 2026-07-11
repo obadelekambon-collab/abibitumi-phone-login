@@ -1182,6 +1182,7 @@ class ABChat_REST {
 				'body'       => $m->body,
 				'type'       => $m->type,
 				'attachment' => $m->attachment_url ? array( 'url' => $m->attachment_url, 'name' => $m->attachment_name ) : null,
+				'meta'       => $m->meta ? json_decode( $m->meta, true ) : null,
 				'read'       => ! empty( $m->read_at ),
 				'createdAt'  => $m->created_at,
 				'time'       => mysql2date( get_option( 'time_format' ), $m->created_at ),

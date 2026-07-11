@@ -246,6 +246,27 @@ class ABChat_Plugin_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Chatbot quick-reply metadata survives visitor polling.
+	 */
+	public function test_visitor_poll_includes_chatbot_metadata() {
+		$visitor = ABChat_DB::get_or_create_visitor( 'chatbot-meta-token' );
+		$convo_id = ABChat_DB::create_conversation( array( 'visitor_id' => $visitor->id ) );
+		ABChat_DB::add_message(
+			array(
+				'conversation_id' => $convo_id,
+				'sender_type'     => 'bot',
+				'body'            => 'Choose a topic.',
+				'meta'            => array( 'quickReplies' => array( array( 'id' => 'help', 'label' => 'Help' ) ) ),
+			)
+		);
+		$request = new WP_REST_Request( 'GET', '/abchat/v1/poll' );
+		$request->set_param( '_visitor', $visitor );
+		$request->set_param( 'conversation_id', $convo_id );
+		$data = ( new ABChat_REST() )->poll( $request )->get_data();
+		$this->assertSame( 'help', $data['messages'][0]['meta']['quickReplies'][0]['id'] );
+	}
+
+	/**
 	 * Conversation exports neutralize spreadsheet formula injection.
 	 */
 	public function test_csv_export_cells_neutralize_formulas() {

@@ -181,6 +181,7 @@ class ABChat_Stream {
 				'body'       => $message->body,
 				'type'       => $message->type,
 				'attachment' => $message->attachment_url ? array( 'url' => $message->attachment_url, 'name' => $message->attachment_name ) : null,
+				'meta'       => $message->meta ? json_decode( $message->meta, true ) : null,
 				'read'       => ! empty( $message->read_at ),
 				'createdAt'  => $message->created_at,
 				'time'       => mysql2date( get_option( 'time_format' ), $message->created_at ),
