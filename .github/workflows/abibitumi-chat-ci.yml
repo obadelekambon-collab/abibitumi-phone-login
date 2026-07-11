@@ -114,18 +114,32 @@ jobs:
 
       - name: Install WordPress 5.8 test framework
         if: matrix.wordpress == '5.8.10'
-        run: composer create-project wp-phpunit/wp-phpunit /tmp/wp-phpunit 5.8.10 --no-interaction --prefer-dist --no-progress
+        run: |
+          composer create-project wp-phpunit/wp-phpunit /tmp/wp-phpunit 5.8.10 --no-interaction --prefer-dist --no-progress
+          mkdir -p /tmp/wp58-runner
+          composer require --working-dir=/tmp/wp58-runner phpunit/phpunit:7.5.20 --no-interaction --prefer-dist --no-progress
 
       - name: Install WordPress ${{ matrix.wordpress }}
         run: |
           curl -fsSL https://wordpress.org/wordpress-${{ matrix.wordpress }}.zip -o /tmp/wordpress.zip
           unzip -q /tmp/wordpress.zip -d /tmp
 
-      - name: Run WordPress integration tests
+      - name: Run modern WordPress integration tests
+        if: matrix.wordpress != '5.8.10'
         run: composer test:integration --working-dir=abibitumi-chat
         env:
           WP_CORE_DIR: /tmp/wordpress
-          WP_TESTS_FRAMEWORK_DIR: ${{ matrix.wordpress == '5.8.10' && '/tmp/wp-phpunit' || '' }}
+          WP_TEST_DB_HOST: 127.0.0.1
+          WP_TEST_DB_NAME: wordpress_test
+          WP_TEST_DB_PASSWORD: root
+          WP_TEST_DB_USER: root
+
+      - name: Run minimum WordPress integration tests
+        if: matrix.wordpress == '5.8.10'
+        run: /tmp/wp58-runner/vendor/bin/phpunit -c abibitumi-chat/tests/integration/phpunit.xml.dist
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+          WP_TESTS_FRAMEWORK_DIR: /tmp/wp-phpunit
           WP_TEST_DB_HOST: 127.0.0.1
           WP_TEST_DB_NAME: wordpress_test
           WP_TEST_DB_PASSWORD: root
