@@ -110,6 +110,7 @@ ok( $defaults['gemini_model'] === 'gemini-2.5-flash', 'Gemini model has a portab
 ok( $defaults['bot_rate_limit'] === 10 && $defaults['bot_rate_window'] === 60, 'bot rate limit has portable defaults' );
 ok( $defaults['session_rate_limit'] === 30 && $defaults['session_rate_window'] === 3600, 'new-session rate limit has portable defaults' );
 ok( $defaults['message_rate_limit'] === 30 && $defaults['message_rate_window'] === 60, 'visitor message rate limit has portable defaults' );
+ok( $defaults['conversation_rate_limit'] === 10 && $defaults['conversation_rate_window'] === 3600, 'conversation rate limit has portable defaults' );
 ok( $defaults['stream_enabled'] === 0 && $defaults['stream_duration'] === 25, 'SSE transport is optional with a bounded default duration' );
 ok( $defaults['retention_enabled'] === 0 && $defaults['retention_days'] === 365, 'retention is opt-in with a one-year default policy' );
 
@@ -216,6 +217,16 @@ ok( false === $rest->check_message_rate_limit( $visitor ), 'visitor message at l
 $limited = $rest->check_message_rate_limit( $visitor );
 ok( is_wp_error( $limited ) && 'abchat_message_rate_limited' === $limited->get_error_code(), 'visitor message above limit rejected' );
 ok( 429 === $limited->get_error_data()['status'], 'visitor message limit returns HTTP 429' );
+
+echo "== Conversation creation rate limit ==\n";
+$__transients = array();
+ABChat_Settings::update( array( 'conversation_rate_limit' => 2, 'conversation_rate_window' => 60 ) );
+$visitor = (object) array( 'id' => 9, 'ip' => '192.0.2.23' );
+ok( false === $rest->check_conversation_rate_limit( $visitor ), 'first conversation allowed' );
+ok( false === $rest->check_conversation_rate_limit( $visitor ), 'conversation at limit allowed' );
+$limited = $rest->check_conversation_rate_limit( $visitor );
+ok( is_wp_error( $limited ) && 'abchat_conversation_rate_limited' === $limited->get_error_code(), 'conversation above limit rejected' );
+ok( 429 === $limited->get_error_data()['status'], 'conversation limit returns HTTP 429' );
 
 echo "== New visitor session rate limit ==\n";
 $__transients             = array();

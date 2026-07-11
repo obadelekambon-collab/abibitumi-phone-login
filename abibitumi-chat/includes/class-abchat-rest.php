@@ -306,6 +306,10 @@ class ABChat_REST {
 	 */
 	public function start_conversation( $req ) {
 		$visitor = $req->get_param( '_visitor' );
+		$limited = $this->check_conversation_rate_limit( $visitor );
+		if ( is_wp_error( $limited ) ) {
+			return $limited;
+		}
 
 		// Capture pre-chat details onto the visitor.
 		$update = array();
@@ -613,6 +617,39 @@ class ABChat_REST {
 				continue;
 			}
 			$limited = $this->consume_rate_limit( $bucket[0], $bucket[1], $window, 'abchat_message_rate_limited' );
+			if ( is_wp_error( $limited ) ) {
+				return $limited;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Consume visitor and IP buckets for new conversations.
+	 *
+	 * @param object $visitor Visitor row.
+	 * @return false|WP_Error
+	 */
+	public function check_conversation_rate_limit( $visitor ) {
+		$limit  = max( 1, (int) ABChat_Settings::get( 'conversation_rate_limit', 10 ) );
+		$window = max( 60, (int) ABChat_Settings::get( 'conversation_rate_window', 3600 ) );
+		$keys   = array( array( 'abchat_conversation_v_' . (int) $visitor->id, $limit ) );
+		if ( ! empty( $visitor->ip ) ) {
+			$keys[] = array( 'abchat_conversation_ip_' . md5( (string) $visitor->ip ), $limit * 3 );
+		}
+		/**
+		 * Filter conversation creation rate-limit buckets.
+		 *
+		 * @param array  $keys    Array of { transient key, limit } pairs.
+		 * @param object $visitor Visitor row.
+		 * @param int    $window  Window length in seconds.
+		 */
+		$keys = apply_filters( 'abchat_conversation_rate_limit_keys', $keys, $visitor, $window );
+		foreach ( (array) $keys as $bucket ) {
+			if ( ! is_array( $bucket ) || count( $bucket ) < 2 ) {
+				continue;
+			}
+			$limited = $this->consume_rate_limit( $bucket[0], $bucket[1], $window, 'abchat_conversation_rate_limited' );
 			if ( is_wp_error( $limited ) ) {
 				return $limited;
 			}

@@ -305,6 +305,14 @@ $checkbox = function ( $name, $val, $label ) {
 						<p class="description"><?php esc_html_e( 'The IP limit is three times the visitor limit to contain token rotation while allowing shared networks.', 'abibitumi-chat' ); ?></p>
 					</td>
 				</tr>
+				<tr>
+					<th><?php esc_html_e( 'New conversations', 'abibitumi-chat' ); ?></th>
+					<td>
+						<label><input name="conversation_rate_limit" type="number" min="1" value="<?php echo esc_attr( $s['conversation_rate_limit'] ); ?>"> <?php esc_html_e( 'conversations per visitor', 'abibitumi-chat' ); ?></label>
+						<label><input name="conversation_rate_window" type="number" min="60" value="<?php echo esc_attr( $s['conversation_rate_window'] ); ?>"> <?php esc_html_e( 'seconds', 'abibitumi-chat' ); ?></label>
+						<p class="description"><?php esc_html_e( 'The IP limit is three times the visitor limit to prevent conversation-table flooding through token rotation.', 'abibitumi-chat' ); ?></p>
+					</td>
+				</tr>
 			</table>
 			<h4><?php esc_html_e( 'Flows (keyword → answer)', 'abibitumi-chat' ); ?></h4>
 			<p class="description"><?php esc_html_e( 'Comma-separated keywords. Use __HANDOFF__ as the answer to route the visitor to a human.', 'abibitumi-chat' ); ?></p>

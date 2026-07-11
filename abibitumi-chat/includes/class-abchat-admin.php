@@ -228,6 +228,8 @@ class ABChat_Admin {
 			'session_rate_window' => max( 60, absint( isset( $in['session_rate_window'] ) ? $in['session_rate_window'] : 3600 ) ),
 			'message_rate_limit'  => max( 1, absint( isset( $in['message_rate_limit'] ) ? $in['message_rate_limit'] : 30 ) ),
 			'message_rate_window' => max( 10, absint( isset( $in['message_rate_window'] ) ? $in['message_rate_window'] : 60 ) ),
+			'conversation_rate_limit'  => max( 1, absint( isset( $in['conversation_rate_limit'] ) ? $in['conversation_rate_limit'] : 10 ) ),
+			'conversation_rate_window' => max( 60, absint( isset( $in['conversation_rate_window'] ) ? $in['conversation_rate_window'] : 3600 ) ),
 			'office_hours_enabled'=> $checkbox( 'office_hours_enabled' ),
 			'offline_message'     => sanitize_textarea_field( isset( $in['offline_message'] ) ? $in['offline_message'] : '' ),
 			'bot_enabled'         => $checkbox( 'bot_enabled' ),

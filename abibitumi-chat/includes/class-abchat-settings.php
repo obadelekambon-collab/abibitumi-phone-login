@@ -70,6 +70,8 @@ class ABChat_Settings {
 			'session_rate_window' => 3600,
 			'message_rate_limit' => 30,
 			'message_rate_window' => 60,
+			'conversation_rate_limit' => 10,
+			'conversation_rate_window' => 3600,
 
 			// Office hours (24h, site timezone). Empty = always open.
 			'office_hours_enabled' => 0,
