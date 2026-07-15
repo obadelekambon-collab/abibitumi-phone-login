@@ -53,3 +53,5 @@ The plugin includes:
 
 See [`abibitumi-chat/README.md`](abibitumi-chat/README.md) for features,
 architecture, installation, deployment, migration notes, and extension points.
+See [`abibitumi-chat/VERIFICATION.md`](abibitumi-chat/VERIFICATION.md) for the
+current release and deployment validation checklist.
